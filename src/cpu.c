@@ -188,9 +188,13 @@ static void store(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cyc
 	cpu->cycles += 3 + extra_cycles;
 }
 
-static void adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement)
 {
 	uint8_t byte = read_byte(cpu->mem, addr);
+
+	if (ones_complement)
+		byte = ~byte;
+
 	uint8_t a = cpu->regs.a + byte + check_status(cpu, CARRY);
 	uint8_t overflow = (byte & 0x80) == (cpu->regs.a & 0x80) && (byte & 0x80) != (a & 0x80);
 	uint8_t carry = (((uint16_t)cpu->regs.a + (uint16_t)byte) & 0xFF00) != 0;
@@ -198,23 +202,6 @@ static void adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	set_status(cpu, OVERFLOW, overflow);
 	set_zn_flags(cpu, a);
 	set_status(cpu, CARRY, carry);
-
-	cpu->regs.a = a;
-	cpu->cycles += 2 + extra_cycles;
-}
-
-static void sbc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
-{
-	// MAYBE FIX OVERFLOW AND CARRY, in adc it's easy but it really makes me wonder
-	// in sbc...
-	uint8_t byte = read_byte(cpu->mem, addr);
-	uint8_t a = cpu->regs.a - byte - (1 - check_status(cpu, CARRY));
-	uint8_t overflow = (byte & 0x80) == (cpu->regs.a & 0x80) && (byte & 0x80) != (a & 0x80);
-	uint8_t carry = (((uint16_t)cpu->regs.a - (uint16_t)byte) & 0xFF00) != 0;
-
-	set_status(cpu, OVERFLOW, !overflow);
-	set_zn_flags(cpu, a);
-	set_status(cpu, CARRY, !carry);
 
 	cpu->regs.a = a;
 	cpu->cycles += 2 + extra_cycles;
@@ -276,52 +263,52 @@ void emulate_cpu(struct cpu *cpu)
 
 	switch (opcode) {
 		case 0x69:
-			adc(cpu, immediate(cpu), 0);
+			adc(cpu, immediate(cpu), 0, 0);
 			break;
 		case 0x65:
-			adc(cpu, zeropage(cpu), 1);
+			adc(cpu, zeropage(cpu), 1, 0);
 			break;
 		case 0x75:
-			adc(cpu, zeropage_indexed(cpu, cpu->regs.x), 2);
+			adc(cpu, zeropage_indexed(cpu, cpu->regs.x), 2, 0);
 			break;
 		case 0x6D:
-			adc(cpu, absolute(cpu), 2);
+			adc(cpu, absolute(cpu), 2, 0);
 			break;
 		case 0x7D:
-			adc(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			adc(cpu, absolute_indexed(cpu, cpu->regs.x), 2, 0);
 			break;
 		case 0x79:
-			adc(cpu, absolute_indexed(cpu, cpu->regs.y), 2);
+			adc(cpu, absolute_indexed(cpu, cpu->regs.y), 2, 0);
 			break;
 		case 0x61:
-			adc(cpu, indexed_indirect(cpu), 4);
+			adc(cpu, indexed_indirect(cpu), 4, 0);
 			break;
 		case 0x71:
-			adc(cpu, indirect_indexed(cpu), 3);
+			adc(cpu, indirect_indexed(cpu), 3, 0);
 			break;
 		case 0xE9:
-			sbc(cpu, immediate(cpu), 0);
+			adc(cpu, immediate(cpu), 0, 1);
 			break;
 		case 0xE5:
-			sbc(cpu, zeropage(cpu), 1);
+			adc(cpu, zeropage(cpu), 1, 1);
 			break;
 		case 0xF5:
-			sbc(cpu, zeropage_indexed(cpu, cpu->regs.x), 2);
+			adc(cpu, zeropage_indexed(cpu, cpu->regs.x), 2, 1);
 			break;
 		case 0xED:
-			sbc(cpu, absolute(cpu), 2);
+			adc(cpu, absolute(cpu), 2, 1);
 			break;
 		case 0xFD:
-			sbc(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			adc(cpu, absolute_indexed(cpu, cpu->regs.x), 2, 1);
 			break;
 		case 0xF9:
-			sbc(cpu, absolute_indexed(cpu, cpu->regs.y), 2);
+			adc(cpu, absolute_indexed(cpu, cpu->regs.y), 2, 1);
 			break;
 		case 0xE1:
-			sbc(cpu, indexed_indirect(cpu), 4);
+			adc(cpu, indexed_indirect(cpu), 4, 1);
 			break;
 		case 0xF1:
-			sbc(cpu, indirect_indexed(cpu), 3);
+			adc(cpu, indirect_indexed(cpu), 3, 1);
 			break;
 			// JMP
 		case 0x4C:
