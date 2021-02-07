@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
-void init_memory(struct memory *mem)
+void init_memory(struct memory *mem, struct cartridge *cart)
 {
 	memset(mem->ram, 0, 2048);
-	mem->cart = NULL;
+	mem->cart = cart;
 }
 
 void write_byte(struct memory *mem, uint16_t addr, uint8_t byte)

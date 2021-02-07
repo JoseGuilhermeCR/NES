@@ -11,7 +11,7 @@ struct memory {
 	struct cartridge *cart;
 };
 
-void init_memory(struct memory *mem);
+void init_memory(struct memory *mem, struct cartridge *cart);
 
 void write_byte(struct memory *mem, uint16_t addr, uint8_t byte);
 uint8_t read_byte(struct memory *mem, uint16_t addr);

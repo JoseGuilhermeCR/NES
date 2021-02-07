@@ -31,14 +31,12 @@ int main()
 {
 	struct cpu cpu;
 	struct memory mem;
-
-	init_memory(&mem);
-	init_cpu(&cpu, &mem);
-
 	struct cartridge cart;
 
 	file_to_cart(&cart, "test_roms/nestest.nes");
-	mem.cart = &cart;
+
+	init_memory(&mem, &cart);
+	init_cpu(&cpu, &mem);
 
 	for (;;) {
 		emulate_cpu(&cpu);
