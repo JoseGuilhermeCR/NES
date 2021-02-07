@@ -228,9 +228,9 @@ static void eor(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void inc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void inc_dec(struct cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr) + 1;
+	uint8_t byte = read_byte(cpu->mem, addr) + change;
 	write_byte(cpu->mem, addr, byte);
 
 	set_zn_flags(cpu, byte);
@@ -248,6 +248,111 @@ static void bit(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 3 + extra_cycles;
 }
 
+static void cmp(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
+{
+	uint8_t byte = read_byte(cpu->mem, addr);
+
+	set_status(cpu, CARRY, reg >= byte);
+	set_status(cpu, ZERO, reg == byte);
+	set_status(cpu, NEGATIVE, ((reg - byte) & 0x80) != 0);
+
+	cpu->cycles += 2 + extra_cycles;
+}
+
+static void lsr(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+{
+	uint8_t byte = read_byte(cpu->mem, addr);
+	set_status(cpu, CARRY, byte & 0x01);
+
+	byte >>= 1;
+
+	set_zn_flags(cpu, byte);
+	write_byte(cpu->mem, addr, byte);
+	cpu->cycles += 5 + extra_cycles;
+}
+
+static void lsr_a(struct cpu *cpu)
+{
+	set_status(cpu, CARRY, cpu->regs.a & 0x01);
+
+	cpu->regs.a >>= 1;
+
+	set_zn_flags(cpu, cpu->regs.a);
+	cpu->cycles += 2;
+}
+
+static void asl(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+{
+	uint8_t byte = read_byte(cpu->mem, addr);
+	set_status(cpu, CARRY, byte & 0x80);
+
+	byte <<= 1;
+
+	set_zn_flags(cpu, byte);
+	write_byte(cpu->mem, addr, byte);
+	cpu->cycles += 5 + extra_cycles;
+}
+
+static void asl_a(struct cpu *cpu)
+{
+	set_status(cpu, CARRY, cpu->regs.a & 0x80);
+
+	cpu->regs.a <<= 1;
+
+	set_zn_flags(cpu, cpu->regs.a);
+	cpu->cycles += 2;
+}
+
+static void ror(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+{
+	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t carry = check_status(cpu, CARRY);
+
+	set_status(cpu, CARRY, byte & 0x01);
+	byte = (byte >> 1) | (carry << 7);
+
+	set_zn_flags(cpu, byte);
+	write_byte(cpu->mem, addr, byte);
+	cpu->cycles += 5 + extra_cycles;
+}
+
+static void ror_a(struct cpu *cpu)
+{
+	uint8_t carry = check_status(cpu, CARRY);
+
+	set_status(cpu, CARRY, cpu->regs.a & 0x01);
+	cpu->regs.a = (cpu->regs.a >> 1) | (carry << 7);
+
+	set_zn_flags(cpu, cpu->regs.a);
+	cpu->cycles += 2;
+}
+
+static void rol(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+{
+	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t carry = check_status(cpu, CARRY);
+
+	set_status(cpu, CARRY, byte & 0x80);
+	byte = (byte << 1) | carry;
+
+	set_zn_flags(cpu, byte);
+	write_byte(cpu->mem, addr, byte);
+	cpu->cycles += 5 + extra_cycles;
+}
+
+static void rol_a(struct cpu *cpu)
+{
+	uint8_t carry = check_status(cpu, CARRY);
+
+	set_status(cpu, CARRY, cpu->regs.a & 0x80);
+	cpu->regs.a = (cpu->regs.a << 1) | carry;
+
+	set_zn_flags(cpu, cpu->regs.a);
+	cpu->cycles += 2;
+}
+
+// TODO: Unnoficial opcodes need to be implemented... for now let's try to work with this and try to get the ppu a start as well.
+// Work on a better way to print instructions on the screen.
 void emulate_cpu(struct cpu *cpu)
 {
 	static uint32_t cyc = 0;
@@ -318,6 +423,28 @@ void emulate_cpu(struct cpu *cpu)
 		case 0x6C:
 			cpu->regs.pc = indirect(cpu);
 			cpu->cycles += 5;
+			break;
+			// BRK
+		case 0x00: {
+				   push_stack(cpu, cpu->regs.pc >> 8);
+				   push_stack(cpu, cpu->regs.pc & 0xFF);
+				   push_stack(cpu, cpu->regs.s);
+
+				   uint8_t lo = read_byte(cpu->mem, 0xFFFE);
+				   uint8_t hi = read_byte(cpu->mem, 0xFFFF);
+				   cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
+				   set_status(cpu, BREAK, 1);
+				   cpu->cycles += 7;
+			   }
+			break;
+			// RTI
+		case 0x40: {	
+				   cpu->regs.s = pop_stack(cpu);
+				   uint8_t lo = pop_stack(cpu);
+				   uint8_t hi = pop_stack(cpu);
+				   cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
+				   cpu->cycles += 6;
+			   }
 			break;
 		case 0xA2:
 			load(cpu, immediate(cpu), &cpu->regs.x, 0);
@@ -541,59 +668,220 @@ void emulate_cpu(struct cpu *cpu)
 			   eor(cpu, indirect_indexed(cpu), 3);
 			   break;
 		case 0xE6:
-			   inc(cpu, zeropage(cpu), 0);
+			   inc_dec(cpu, zeropage(cpu), 0x1, 0);
 			   break;
 		case 0xF6:
-			   inc(cpu, zeropage_indexed(cpu, cpu->regs.x), 1);
+			   inc_dec(cpu, zeropage_indexed(cpu, cpu->regs.x), 0x1, 1);
 			   break;
 		case 0xEE:
-			   inc(cpu, absolute(cpu), 1);
+			   inc_dec(cpu, absolute(cpu), 0x1, 1);
 			   break;
 		case 0xFE:
-			   inc(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			   inc_dec(cpu, absolute_indexed(cpu, cpu->regs.x), 0x1, 2);
 			   break;
-		// INX
+		case 0xC6:
+			   inc_dec(cpu, zeropage(cpu), 0xFF, 0);
+			   break;
+		case 0xD6:
+			   inc_dec(cpu, zeropage_indexed(cpu, cpu->regs.x), 0xFF, 1);
+			   break;
+		case 0xCE:
+			   inc_dec(cpu, absolute(cpu), 0xFF, 1);
+			   break;
+		case 0xDE:
+			   inc_dec(cpu, absolute_indexed(cpu, cpu->regs.x), 0xFF, 2);
+			   break;
 		case 0xE8:
 			   ++cpu->regs.x;
 			   set_zn_flags(cpu, cpu->regs.x);
 			   cpu->cycles += 2;
 			   break;
-		// INY
 		case 0xC8:
 			   ++cpu->regs.y;
 			   set_zn_flags(cpu, cpu->regs.y);
 			   cpu->cycles += 2;
 			   break;
+		case 0x88:
+			   --cpu->regs.y;
+			   set_zn_flags(cpu, cpu->regs.y);
+			   cpu->cycles += 2;
+			   break;
+		case 0xCA:
+			   --cpu->regs.x;
+			   set_zn_flags(cpu, cpu->regs.x);
+			   cpu->cycles += 2;
+			   break;
+
 		case 0x24:
 			   bit(cpu, zeropage(cpu), 0);
 			   break;
 		case 0x2C:
 			   bit(cpu, absolute(cpu), 1);
 			   break;
-		// SEI
 		case 0x78:
 			   set_status(cpu, INTERRUPT_DISABLE, 1);
 			   cpu->cycles += 2;
 			   break;
-		// SED
 		case 0xF8:
 			   set_status(cpu, DECIMAL, 1);
 			   cpu->cycles += 2;
 			   break;
-		// PHP
+		case 0xD8:
+			   set_status(cpu, DECIMAL, 0);
+			   cpu->cycles += 2;
+			   break;
+		case 0xB8:
+			   set_status(cpu, OVERFLOW, 0);
+			   cpu->cycles += 2;
+			   break;
 		case 0x08:
 			   push_stack(cpu, cpu->regs.s);
 			   cpu->cycles += 3;
 			   break;
-		// PLA
+		case 0x28:
+			   cpu->regs.s = pop_stack(cpu);
+			   cpu->cycles += 4;
+			   break;
 		case 0x68:
 			   cpu->regs.a = pop_stack(cpu);
 			   set_zn_flags(cpu, cpu->regs.a);
 			   cpu->cycles += 4;
 			   break;
-
-		default:
-			   exit(0);
+		case 0x48:
+			   push_stack(cpu, cpu->regs.a);
+			   cpu->cycles += 3;
+			   break;
+		case 0xC9:
+			   cmp(cpu, immediate(cpu), cpu->regs.a, 0);
+			   break;
+		case 0xC5:
+			   cmp(cpu, zeropage(cpu), cpu->regs.a, 1);
+			   break;
+		case 0xD5:
+			   cmp(cpu, zeropage_indexed(cpu, cpu->regs.x), cpu->regs.a, 2);
+			   break;
+		case 0xCD:
+			   cmp(cpu, absolute(cpu), cpu->regs.a, 2);
+			   break;
+		case 0xDD:
+			   cmp(cpu, absolute_indexed(cpu, cpu->regs.x), cpu->regs.a, 2);
+			   break;
+		case 0xD9:
+			   cmp(cpu, absolute_indexed(cpu, cpu->regs.y), cpu->regs.a, 2);
+			   break;
+		case 0xC1:
+			   cmp(cpu, indexed_indirect(cpu), cpu->regs.a, 4);
+			   break;
+		case 0xD1:
+			   cmp(cpu, indirect_indexed(cpu), cpu->regs.a, 3);
+			   break;
+		case 0xE0:
+			   cmp(cpu, immediate(cpu), cpu->regs.x, 0);
+			   break;
+		case 0xE4:
+			   cmp(cpu, zeropage(cpu), cpu->regs.x, 1);
+			   break;
+		case 0xEC:
+			   cmp(cpu, absolute(cpu), cpu->regs.x, 2);
+			   break;
+		case 0xC0:
+			   cmp(cpu, immediate(cpu), cpu->regs.y, 0);
+			   break;
+		case 0xC4:
+			   cmp(cpu, zeropage(cpu), cpu->regs.y, 1);
+			   break;
+		case 0xCC:
+			   cmp(cpu, absolute(cpu), cpu->regs.y, 2);
+			   break;
+		case 0xA8:
+			   cpu->regs.y = cpu->regs.a;
+			   set_zn_flags(cpu, cpu->regs.y);
+			   cpu->cycles += 2;
+			   break;
+		case 0xBA:
+			   cpu->regs.x = cpu->regs.sp;
+			   set_zn_flags(cpu, cpu->regs.x);
+			   cpu->cycles += 2;
+			   break;
+		case 0x8A:
+			   cpu->regs.a = cpu->regs.x;
+			   set_zn_flags(cpu, cpu->regs.a);
+			   cpu->cycles += 2;
+			   break;
+		case 0x9A:
+			   cpu->regs.sp = cpu->regs.x;
+			   cpu->cycles += 2;
+			   break;
+		case 0x98:
+			   cpu->regs.a = cpu->regs.y;
+			   set_zn_flags(cpu, cpu->regs.a);
+			   cpu->cycles += 2;
+			   break;
+		case 0xAA:
+			   cpu->regs.x = cpu->regs.a;
+			   set_zn_flags(cpu, cpu->regs.x);
+			   cpu->cycles += 2;
+			   break;
+		case 0x4A:
+			   lsr_a(cpu);
+			   break;
+		case 0x46:
+			   lsr(cpu, zeropage(cpu), 0);
+			   break;
+		case 0x56:
+			   lsr(cpu, zeropage_indexed(cpu, cpu->regs.x), 1);
+			   break;
+		case 0x4E:
+			   lsr(cpu, absolute(cpu), 1);
+			   break;
+		case 0x5E:
+			   lsr(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			   break;
+		case 0x0A:
+			   asl_a(cpu);
+			   break;
+		case 0x06:
+			   asl(cpu, zeropage(cpu), 0);
+			   break;
+		case 0x16:
+			   asl(cpu, zeropage_indexed(cpu, cpu->regs.x), 1);
+			   break;
+		case 0x0E:
+			   asl(cpu, absolute(cpu), 1);
+			   break;
+		case 0x1E:
+			   asl(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			   break;
+		case 0x6A:
+			   ror_a(cpu);
+			   break;
+		case 0x66:
+			   ror(cpu, zeropage(cpu), 0);
+			   break;
+		case 0x76:
+			   ror(cpu, zeropage_indexed(cpu, cpu->regs.x), 1);
+			   break;
+		case 0x6E:
+			   ror(cpu, absolute(cpu), 1);
+			   break;
+		case 0x7E:
+			   ror(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			   break;
+		case 0x2A:
+			   rol_a(cpu);
+			   break;
+		case 0x26:
+			   rol(cpu, zeropage(cpu), 0);
+			   break;
+		case 0x36:
+			   rol(cpu, zeropage_indexed(cpu, cpu->regs.x), 1);
+			   break;
+		case 0x2E:
+			   rol(cpu, absolute(cpu), 1);
+			   break;
+		case 0x3E:
+			   rol(cpu, absolute_indexed(cpu, cpu->regs.x), 2);
+			   break;
 	}
 
 	cyc += cpu->cycles;
