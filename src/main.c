@@ -41,8 +41,13 @@ int main()
 	init_cpu(&cpu, &mem);
 	init_ppu(&ppu, &mem);
 
-	for (;;) {
+	// Each one of these is one cycle for cpu and three for ppu.
+	for (int32_t i = 0; i < 40; ++i) {
 		emulate_cpu(&cpu);
+
+		emulate_ppu(&ppu);
+		emulate_ppu(&ppu);
+		emulate_ppu(&ppu);
 	}
 
 	destroy_cartridge(&cart);

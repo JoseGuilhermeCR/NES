@@ -36,6 +36,7 @@ struct cpu {
 
 	uint8_t interrupt;
 	uint8_t cycles;
+	uint8_t current_cycle;
 };
 
 void init_cpu(struct cpu *cpu, struct memory *mem);

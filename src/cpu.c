@@ -63,6 +63,33 @@ static void request_interrupt(struct cpu *cpu, enum Interrupt i)
 		cpu->interrupt |= (uint8_t)i;
 }
 
+static void handle_interrupt(struct cpu *cpu)
+{
+	uint16_t handler;
+
+	if ((cpu->interrupt & RESET) != 0) {
+		handler = 0xFFFC;
+		cpu->interrupt &= ~RESET;
+	} else if ((cpu->interrupt & NMI) != 0) {
+		handler = 0xFFFA;
+		cpu->interrupt &= ~NMI;
+	} else if ((cpu->interrupt & IRQ) != 0) {
+		handler = 0xFFFE;
+		cpu->interrupt &= ~IRQ;
+	}
+
+	push_stack(cpu, cpu->regs.pc >> 8);
+	push_stack(cpu, cpu->regs.pc & 0xFF);
+	push_stack(cpu, cpu->regs.s);
+
+	uint8_t lo = read_cpu_byte(cpu->mem, handler);
+	uint8_t hi = read_cpu_byte(cpu->mem, handler + 1);
+	cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
+
+	cpu->current_cycle = 0;
+	cpu->cycles = 7;
+}
+
 static uint16_t absolute(struct cpu *cpu)
 {
 	uint8_t lo = read_cpu_byte(cpu->mem, cpu->regs.pc++);
@@ -355,7 +382,21 @@ static void rol_a(struct cpu *cpu)
 // Work on a better way to print instructions on the screen.
 void emulate_cpu(struct cpu *cpu)
 {
-	static uint32_t cyc = 0;
+//	static uint32_t cyc = 0;
+
+	if (cpu->current_cycle < cpu->cycles) {
+		++cpu->current_cycle;
+		printf("%i of %i\n", cpu->current_cycle, cpu->cycles);
+		return;
+	}
+
+	if (cpu->interrupt) {
+		handle_interrupt(cpu);
+		return;
+	}
+
+	cpu->cycles = 0;
+	cpu->current_cycle = 0;
 
 	const uint8_t opcode = read_cpu_byte(cpu->mem, cpu->regs.pc);
 	// Not a good idea, but leave it here for now.
@@ -884,9 +925,9 @@ void emulate_cpu(struct cpu *cpu)
 			   break;
 	}
 
-	cyc += cpu->cycles;
-	cpu->cycles = 0;
-	printf("CYC: %i ", cyc);
+	//cyc += cpu->cycles;
+	//cpu->cycles = 0;
+	//printf("CYC: %i ", cyc);
 	print_registers(&cpu->regs);
 }
 
@@ -894,7 +935,7 @@ void init_cpu(struct cpu *cpu, struct memory *mem)
 {
 	struct registers regs;
 
-	regs.pc = 0xC000;
+	regs.pc = 0x0000;
 	regs.sp = 0xFF;
 	regs.a  = 0x00;
 	regs.x  = 0x00;
@@ -905,4 +946,5 @@ void init_cpu(struct cpu *cpu, struct memory *mem)
 	cpu->mem = mem;
 	cpu->interrupt = (uint8_t)RESET;
 	cpu->cycles = 0;
+	cpu->current_cycle = 0;
 }

@@ -40,3 +40,23 @@ uint8_t read_cpu_byte(struct memory *mem, uint16_t addr)
 	printf("ERROR read_byte got to end of function\n");
 	return 0;
 }
+
+void write_ppu_byte(struct memory *mem, uint16_t addr, uint8_t byte)
+{
+	if (addr <= 0x1FFF) {
+				
+	} else if (addr >= 0x2000 && addr <= 0x2FFF) {
+	} else if (addr >= 0x3000 && addr <= 0x3EFF) {
+	} else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+	}
+}
+
+uint8_t read_ppu_byte(struct memory *mem, uint16_t addr)
+{
+	if (addr <= 0x1FFF) {				
+	} else if (addr >= 0x2000 && addr <= 0x2FFF) {
+	} else if (addr >= 0x3000 && addr <= 0x3EFF) {
+	} else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+	}
+	return 0;
+}

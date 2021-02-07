@@ -1,6 +1,8 @@
 #ifndef __PPU_H__
 #define __PPU_H__
 
+#include <stdint.h>
+
 struct memory;
 
 enum PpuRegisters {
@@ -17,8 +19,10 @@ enum PpuRegisters {
 
 struct ppu {
 	struct memory *mem;
+	uint8_t odd_frame;
 };
 
 void init_ppu(struct ppu *ppu, struct memory *mem);
+void emulate_ppu(struct ppu *ppu);
 
 #endif
