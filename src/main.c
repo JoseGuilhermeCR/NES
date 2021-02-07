@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "ppu.h"
 #include "memory.h"
 #include "cartridge.h"
 
@@ -30,6 +31,7 @@ static void file_to_cart(struct cartridge *cart, const char *filename)
 int main()
 {
 	struct cpu cpu;
+	struct ppu ppu;
 	struct memory mem;
 	struct cartridge cart;
 
@@ -37,6 +39,7 @@ int main()
 
 	init_memory(&mem, &cart);
 	init_cpu(&cpu, &mem);
+	init_ppu(&ppu, &mem);
 
 	for (;;) {
 		emulate_cpu(&cpu);

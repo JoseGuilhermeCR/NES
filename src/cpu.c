@@ -12,7 +12,7 @@ static void print_stack(const struct cpu *cpu)
 			printf("\n%02X: ", i);
 		}
 
-		uint8_t byte = read_byte(cpu->mem, 0x0100 + i);
+		uint8_t byte = read_cpu_byte(cpu->mem, 0x0100 + i);
 		printf("%02X ", byte);
 	}
 	puts("\n-----------");
@@ -28,12 +28,12 @@ static void print_registers(const struct registers *regs)
 
 static void push_stack(struct cpu *cpu, uint8_t byte)
 {
-	write_byte(cpu->mem, cpu->regs.sp-- + 0x0100, byte);
+	write_cpu_byte(cpu->mem, cpu->regs.sp-- + 0x0100, byte);
 }
 
 static uint8_t pop_stack(struct cpu *cpu)
 {
-	return read_byte(cpu->mem, ++cpu->regs.sp + 0x0100);
+	return read_cpu_byte(cpu->mem, ++cpu->regs.sp + 0x0100);
 }
 
 static uint8_t check_status(struct cpu *cpu, enum Status s)
@@ -65,8 +65,8 @@ static void request_interrupt(struct cpu *cpu, enum Interrupt i)
 
 static uint16_t absolute(struct cpu *cpu)
 {
-	uint8_t lo = read_byte(cpu->mem, cpu->regs.pc++);
-	uint8_t hi = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t lo = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t hi = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	uint16_t addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 	printf("absolute -> addr: %04X ", addr);
 	return addr;
@@ -74,8 +74,8 @@ static uint16_t absolute(struct cpu *cpu)
 
 static uint16_t absolute_indexed(struct cpu *cpu, uint8_t index)
 {
-	uint8_t lo = read_byte(cpu->mem, cpu->regs.pc++);
-	uint8_t hi = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t lo = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t hi = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	uint16_t absolute = ((uint16_t)hi << 8) | (uint16_t)lo;
 	uint16_t addr = absolute + (uint16_t)index;
 
@@ -94,14 +94,14 @@ static uint16_t immediate(struct cpu *cpu)
 
 static uint16_t zeropage(struct cpu *cpu)
 {
-	uint8_t addr = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t addr = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	printf("zeropage -> addr: %02X ", addr);
 	return (uint16_t)addr;
 }
 
 static uint16_t zeropage_indexed(struct cpu *cpu, uint8_t index)
 {
-	uint8_t byte = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	uint16_t addr = (byte + index) % 0xFF;
 	printf("zeropage_indexed -> byte: %02X index: %02X addr: %04X ", byte, index, addr);
 	return addr;
@@ -109,19 +109,19 @@ static uint16_t zeropage_indexed(struct cpu *cpu, uint8_t index)
 
 static uint8_t relative(struct cpu *cpu)
 {
-	uint8_t byte = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	printf("relative -> byte: %02X ", byte);
 	return byte;
 }
 
 static uint16_t indirect(struct cpu *cpu)
 {
-	uint8_t lo = read_byte(cpu->mem, cpu->regs.pc++);
-	uint8_t hi = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t lo = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t hi = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 	uint16_t addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
-	lo = read_byte(cpu->mem, addr);
-	hi = read_byte(cpu->mem, addr + 1);
+	lo = read_cpu_byte(cpu->mem, addr);
+	hi = read_cpu_byte(cpu->mem, addr + 1);
 	uint16_t iaddr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
 	printf("indirect -> addr: %04X indirect: %04X ", addr, iaddr);
@@ -130,10 +130,10 @@ static uint16_t indirect(struct cpu *cpu)
 
 static uint16_t indexed_indirect(struct cpu *cpu)
 {
-	uint8_t zp_addr = read_byte(cpu->mem, cpu->regs.pc++) + cpu->regs.x;
+	uint8_t zp_addr = read_cpu_byte(cpu->mem, cpu->regs.pc++) + cpu->regs.x;
 
-	uint8_t lo = read_byte(cpu->mem, zp_addr);
-	uint8_t hi = read_byte(cpu->mem, zp_addr + 1);
+	uint8_t lo = read_cpu_byte(cpu->mem, zp_addr);
+	uint8_t hi = read_cpu_byte(cpu->mem, zp_addr + 1);
 	uint16_t addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
 	printf("indexed_indirect -> zeropage_addr: %02x addr: %04x ", zp_addr, addr);
@@ -143,10 +143,10 @@ static uint16_t indexed_indirect(struct cpu *cpu)
 // TODO: page cross 1+ cycle
 static uint16_t indirect_indexed(struct cpu *cpu)
 {
-	uint8_t zp_addr = read_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t zp_addr = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 
-	uint8_t lo = read_byte(cpu->mem, zp_addr);
-	uint8_t hi = read_byte(cpu->mem, zp_addr + 1);
+	uint8_t lo = read_cpu_byte(cpu->mem, zp_addr);
+	uint8_t hi = read_cpu_byte(cpu->mem, zp_addr + 1);
 	uint16_t addr = (((uint16_t)hi << 8) | (uint16_t)lo) + (uint16_t)cpu->regs.y;
 
 	printf("indirect_indexed -> zeropage_addr: %02x addr: %04x ", zp_addr, addr);
@@ -157,7 +157,7 @@ static uint16_t indirect_indexed(struct cpu *cpu)
 
 static void load(struct cpu *cpu, uint16_t addr, uint8_t *reg, uint8_t extra_cycles)
 {
-	*reg = read_byte(cpu->mem, addr);
+	*reg = read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, *reg);
 	cpu->cycles += 2 + extra_cycles;
 }
@@ -184,13 +184,13 @@ static void branch(struct cpu *cpu, uint8_t displacement, enum Status status, ui
 
 static void store(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 {
-	write_byte(cpu->mem, addr, reg);
+	write_cpu_byte(cpu->mem, addr, reg);
 	cpu->cycles += 3 + extra_cycles;
 }
 
 static void adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
 	if (ones_complement)
 		byte = ~byte;
@@ -209,29 +209,29 @@ static void adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t on
 
 static void and(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	cpu->regs.a &= read_byte(cpu->mem, addr);
+	cpu->regs.a &= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
 static void ora(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	cpu->regs.a |= read_byte(cpu->mem, addr);
+	cpu->regs.a |= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
 static void eor(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	cpu->regs.a ^= read_byte(cpu->mem, addr);
+	cpu->regs.a ^= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
 static void inc_dec(struct cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr) + change;
-	write_byte(cpu->mem, addr, byte);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr) + change;
+	write_cpu_byte(cpu->mem, addr, byte);
 
 	set_zn_flags(cpu, byte);
 	cpu->cycles += 5 + extra_cycles;
@@ -239,7 +239,7 @@ static void inc_dec(struct cpu *cpu, uint16_t addr, uint8_t change, uint8_t extr
 
 static void bit(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
 	set_status(cpu, ZERO, (byte & cpu->regs.a) == 0);
 	set_status(cpu, OVERFLOW, byte & 0x40);
@@ -250,7 +250,7 @@ static void bit(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 
 static void cmp(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
 	set_status(cpu, CARRY, reg >= byte);
 	set_status(cpu, ZERO, reg == byte);
@@ -261,13 +261,13 @@ static void cmp(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycle
 
 static void lsr(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 	set_status(cpu, CARRY, byte & 0x01);
 
 	byte >>= 1;
 
 	set_zn_flags(cpu, byte);
-	write_byte(cpu->mem, addr, byte);
+	write_cpu_byte(cpu->mem, addr, byte);
 	cpu->cycles += 5 + extra_cycles;
 }
 
@@ -283,13 +283,13 @@ static void lsr_a(struct cpu *cpu)
 
 static void asl(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 	set_status(cpu, CARRY, byte & 0x80);
 
 	byte <<= 1;
 
 	set_zn_flags(cpu, byte);
-	write_byte(cpu->mem, addr, byte);
+	write_cpu_byte(cpu->mem, addr, byte);
 	cpu->cycles += 5 + extra_cycles;
 }
 
@@ -305,14 +305,14 @@ static void asl_a(struct cpu *cpu)
 
 static void ror(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 	uint8_t carry = check_status(cpu, CARRY);
 
 	set_status(cpu, CARRY, byte & 0x01);
 	byte = (byte >> 1) | (carry << 7);
 
 	set_zn_flags(cpu, byte);
-	write_byte(cpu->mem, addr, byte);
+	write_cpu_byte(cpu->mem, addr, byte);
 	cpu->cycles += 5 + extra_cycles;
 }
 
@@ -329,14 +329,14 @@ static void ror_a(struct cpu *cpu)
 
 static void rol(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte = read_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 	uint8_t carry = check_status(cpu, CARRY);
 
 	set_status(cpu, CARRY, byte & 0x80);
 	byte = (byte << 1) | carry;
 
 	set_zn_flags(cpu, byte);
-	write_byte(cpu->mem, addr, byte);
+	write_cpu_byte(cpu->mem, addr, byte);
 	cpu->cycles += 5 + extra_cycles;
 }
 
@@ -357,10 +357,10 @@ void emulate_cpu(struct cpu *cpu)
 {
 	static uint32_t cyc = 0;
 
-	const uint8_t opcode = read_byte(cpu->mem, cpu->regs.pc);
+	const uint8_t opcode = read_cpu_byte(cpu->mem, cpu->regs.pc);
 	// Not a good idea, but leave it here for now.
-	const uint8_t op1 = read_byte(cpu->mem, cpu->regs.pc + 1);
-	const uint8_t op2 = read_byte(cpu->mem, cpu->regs.pc + 2);
+	const uint8_t op1 = read_cpu_byte(cpu->mem, cpu->regs.pc + 1);
+	const uint8_t op2 = read_cpu_byte(cpu->mem, cpu->regs.pc + 2);
 
 	printf("%02X %02X %02X -> ", opcode, op1, op2);
 
@@ -430,8 +430,8 @@ void emulate_cpu(struct cpu *cpu)
 				   push_stack(cpu, cpu->regs.pc & 0xFF);
 				   push_stack(cpu, cpu->regs.s);
 
-				   uint8_t lo = read_byte(cpu->mem, 0xFFFE);
-				   uint8_t hi = read_byte(cpu->mem, 0xFFFF);
+				   uint8_t lo = read_cpu_byte(cpu->mem, 0xFFFE);
+				   uint8_t hi = read_cpu_byte(cpu->mem, 0xFFFF);
 				   cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
 				   set_status(cpu, BREAK, 1);
 				   cpu->cycles += 7;
