@@ -1,37 +1,11 @@
 #include "nes.h"
 #include "cartridge.h"
-#include "SDL_FontCache.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 const uint32_t KIB_16 = 16 * 1024;
 const uint32_t KIB_8 = 8 * 1024;
-
-void debug_cpu(struct nes *nes, FC_Font *font)
-{
-	FC_Draw(
-			font,
-			nes->renderer,
-			CPU_RECT.x,
-			CPU_RECT.y + FC_GetHeight(font, "CPU STATUS"),
-			"PC: %04X\nSTACK POINTER: %02X STATUS: %02X\n"
-			"ACCUMULATOR: %02X X: %02X Y: %02X\n\n\n"
-			"IRQ: %02X NMI: %02X RESET: %02X\n"
-			"CURRENT_CYCLE: %i NEEDED_CYCLES: %i",
-			nes->cpu.regs.pc, nes->cpu.regs.sp, nes->cpu.regs.s,
-			nes->cpu.regs.a, nes->cpu.regs.x, nes->cpu.regs.y,
-			nes->cpu.interrupt & (uint8_t)IRQ,
-			nes->cpu.interrupt & (uint8_t)NMI,
-			nes->cpu.interrupt & (uint8_t)RESET,
-			nes->cpu.current_cycle, nes->cpu.cycles
-	);
-}
-
-void debug_instruction(struct nes *nes, FC_Font *font)
-{
-
-}
 
 static void file_to_cart(struct cartridge *cart, const char *filename)
 {
@@ -62,17 +36,12 @@ int main()
 	nes.running = 1;
 	nes.debug = 1;
 
-	uint32_t window_width = NES_RECT.w;
-	uint32_t window_height = NES_RECT.h;
-	if (nes.debug)
-		window_width += OFFSET + INSTRUCTION_RECT.w;
-
 	nes.window = SDL_CreateWindow(
 			"NES",
 			SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED,
-			window_width,
-			window_height,
+			WIDTH,
+			HEIGHT,
 			0
 	);
 
@@ -86,19 +55,6 @@ int main()
 			-1,
 			SDL_RENDERER_ACCELERATED
 	);
-
-	FC_Font *font = NULL;
-	if (nes.debug) {
-		font = FC_CreateFont();
-		FC_LoadFont(
-				font,
-				nes.renderer,
-				"fonts/DroidSans-Bold.ttf",
-				20,
-				FC_MakeColor(255, 255, 0, 255),
-				TTF_STYLE_NORMAL
-			   );
-	}
 
 	file_to_cart(&cart, "test_roms/nestest.nes");
 
@@ -130,40 +86,12 @@ int main()
 		SDL_SetRenderDrawColor(nes.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(nes.renderer);
 
-		SDL_SetRenderDrawColor(nes.renderer, 128, 128, 128, 255);
-		SDL_RenderFillRect(nes.renderer, &NES_RECT);
-
-		if (nes.debug) {
-			// TODO: Move stuff that only need to be drawn once outside of loop.
-			SDL_SetRenderDrawColor(nes.renderer, 0, 0, 128, 255);
-			SDL_RenderFillRect(nes.renderer, &INSTRUCTION_RECT);
-			SDL_SetRenderDrawColor(nes.renderer, 0, 128, 128, 255);
-			SDL_RenderFillRect(nes.renderer, &CPU_RECT);
-
-			FC_Draw(
-					font,
-					nes.renderer,
-					INSTRUCTION_RECT.x,
-					0,
-					"LDA $#40\nDE81  95 00     STA $00,X @ 55 = FF"
-			);
-			// Only Drawn Once
-			FC_Draw(
-					font,
-					nes.renderer,
-					CPU_RECT.x + CPU_RECT.w / 2 - FC_GetWidth(font, "CPU STATUS") / 2,
-					CPU_RECT.y,
-					"CPU STATUS"
-		        );
-			debug_cpu(&nes, font);
-		}
+		//SDL_SetRenderDrawColor(nes.renderer, 128, 128, 128, 255);
+		//SDL_RenderFillRect(nes.renderer, &NES_RECT);
 		SDL_RenderPresent(nes.renderer);
 
 		SDL_Delay(16);
 	}
-
-	if (nes.debug)
-		FC_FreeFont(font);
 
 	SDL_DestroyRenderer(nes.renderer);
 	SDL_DestroyWindow(nes.window);

@@ -7,10 +7,8 @@
 #include "memory.h"
 
 const uint32_t SCALE = 4;
-const uint32_t OFFSET = 20;
-const SDL_Rect NES_RECT = {0, 0, 256 * SCALE, 240 * SCALE};
-const SDL_Rect INSTRUCTION_RECT = {256 * SCALE + OFFSET, 0, 500, 240 * (SCALE - 1)};
-const SDL_Rect CPU_RECT = {256 * SCALE + OFFSET, 240 * (SCALE - 1), 500, 240};
+const uint32_t WIDTH = 256 * SCALE; 
+const uint32_t HEIGHT = 240 * SCALE;
 
 struct nes {
 	uint8_t debug;
