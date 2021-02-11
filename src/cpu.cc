@@ -156,7 +156,7 @@ namespace Nes {
 	void Cpu::emulate() {
 		if (_current_cycle < _cycles) {
 			++_current_cycle;
-			std::cout << static_cast<uint16_t>(_current_cycle) << " of " << static_cast<uint16_t>(_cycles) << '\n';
+			//std::cout << static_cast<uint16_t>(_current_cycle) << " of " << static_cast<uint16_t>(_cycles) << '\n';
 			return;
 		}
 
@@ -173,9 +173,9 @@ namespace Nes {
 		const uint8_t op1 = _mem.read_cpu_byte(_regs.pc + 1);
 		const uint8_t op2 = _mem.read_cpu_byte(_regs.pc + 2);
 
-		std::cout << std::hex;
-		std::cout << static_cast<uint16_t>(opcode) << ' ' << static_cast<uint16_t>(op1) << ' ' << static_cast<uint16_t>(op2) << '\n';
-		std::cout << std::dec;
+		//std::cout << std::hex;
+//		std::cout << static_cast<uint16_t>(opcode) << ' ' << static_cast<uint16_t>(op1) << ' ' << static_cast<uint16_t>(op2) << '\n';
+//		std::cout << std::dec;
 
 		++_regs.pc;
 

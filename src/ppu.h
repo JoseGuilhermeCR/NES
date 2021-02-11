@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace Nes {
 	class Memory;
 	class Window;
@@ -22,8 +24,16 @@ namespace Nes {
 
 			void emulate();
 		private:
+			void pre_render_scanline();
+			void visible_scanlines();
+			void vertical_blanking_lines();
+			void post_render_scanline();
+
 			Window &_window;
 			Memory &_memory;
+
+			uint16_t _cycle;
+			uint16_t _scanline;
 			bool _odd_frame;
 	};
 }

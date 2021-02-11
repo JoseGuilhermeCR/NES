@@ -1,24 +1,7 @@
 #include "cartridge.h"
 
 #include <fstream>
-/*static void file_to_cart(struct cartridge *cart, const char *filename)
-{
-	FILE *rom = fopen(filename, "r");
 
-	 Just read nestest for now. 
-	cart->mapper = &mappers[0];
-
-	cart->prg_banks = 1;  In 16KiB 
-	cart->chr_banks = 1;  In 8KiB 
-	cart->prg = malloc(cart->prg_banks * KIB_16);
-	cart->chr = malloc(cart->chr_banks * KIB_8);
-
-	fseek(rom, 16, SEEK_SET);
-	fread(cart->prg, 1, cart->prg_banks * KIB_16, rom);
-	fread(cart->chr, 1, cart->chr_banks * KIB_8, rom);
-
-	fclose(rom);
-}*/
 namespace Nes {
 	Cartridge::Cartridge(std::string filename)
 		:
@@ -44,14 +27,25 @@ namespace Nes {
 	void Cartridge::write_cpu_byte(uint16_t addr, uint8_t byte)
 	{
 		uint32_t decoded = _mapper->map_cpu_write(addr);
-		_prg[decoded] = byte;
+		_prg.at(decoded) = byte;
 	}
 
 	uint8_t Cartridge::read_cpu_byte(uint16_t addr)
 	{
 		uint32_t decoded = _mapper->map_cpu_read(addr);
-		return _prg[decoded];
+		return _prg.at(decoded);
 	}
+
+	void Cartridge::write_ppu_byte(uint16_t addr, uint8_t byte) {
+		uint32_t decoded = _mapper->map_ppu_write(addr);
+		_chr.at(decoded) = byte;
+	}
+	
+	uint8_t Cartridge::read_ppu_byte(uint16_t addr) {
+		uint32_t decoded = _mapper->map_ppu_read(addr);
+		return _chr.at(decoded);
+	}
+
 
 	Mapper::Mapper(uint8_t prg_banks, uint8_t chr_banks)
 		:
@@ -74,10 +68,10 @@ namespace Nes {
 	}
 
 	uint32_t Mapper0::map_ppu_write(uint16_t addr) {
-		return 0;
+		return addr;
 	}
 
 	uint32_t Mapper0::map_ppu_read(uint16_t addr) {
-		return 0;
+		return addr;
 	}
 }

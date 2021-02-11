@@ -36,6 +36,8 @@ namespace Nes {
 
 			void write_cpu_byte(uint16_t addr, uint8_t byte);
 			uint8_t read_cpu_byte(uint16_t addr);
+			void write_ppu_byte(uint16_t addr, uint8_t byte);
+			uint8_t read_ppu_byte(uint16_t addr);
 		private:
 			uint8_t _prg_banks;
 			uint8_t _chr_banks;

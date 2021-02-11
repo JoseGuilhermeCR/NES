@@ -23,7 +23,7 @@ namespace Nes {
 		private:
 			std::array<uint8_t, 2048> _cpuram;
 			std::array<uint8_t, 8> _ppuregs;
-			std::array<uint8_t, 2000> _ppuram;
+			std::array<uint8_t, 2048> _ppuram;
 			std::unique_ptr<Cartridge> _cart;
 	};
 }
