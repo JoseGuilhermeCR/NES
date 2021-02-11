@@ -1,23 +1,29 @@
-#ifndef __MEMORY_H__
-#define __MEMORY_H__
+#pragma once
 
-#include <stdint.h>
+#include <array>
+#include <memory>
 
-struct cartridge;
+#include "cartridge.h"
 
-struct memory {
-	uint8_t cpu_ram[2048];
-	uint8_t ppu_regs[8];
-	uint8_t ppu_ram[2000];
-	struct cartridge *cart;
-};
+namespace Nes {
 
-void init_memory(struct memory *mem, struct cartridge *cart);
+	class Memory {
+		public:
+			Memory();
 
-void write_cpu_byte(struct memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_cpu_byte(struct memory *mem, uint16_t addr);
+			void attach_cartridge(std::unique_ptr<Cartridge> &cart);
 
-void write_ppu_byte(struct memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_ppu_byte(struct memory *mem, uint16_t addr);
+			bool is_cartridge_attached() const;
 
-#endif
+			void write_cpu_byte(uint16_t addr, uint8_t byte);
+			uint8_t read_cpu_byte(uint16_t addr);
+
+			void write_ppu_byte(uint16_t addr, uint8_t byte);
+			uint8_t read_ppu_byte(uint16_t addr);
+		private:
+			std::array<uint8_t, 2048> _cpuram;
+			std::array<uint8_t, 8> _ppuregs;
+			std::array<uint8_t, 2000> _ppuram;
+			std::unique_ptr<Cartridge> _cart;
+	};
+}

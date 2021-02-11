@@ -1,4 +1,4 @@
 make:
-	gcc src/*.c -Wall -Wextra -pedantic-errors -lSDL2 -lSDL2_ttf -o nes
+	g++ src/*.cc -std=c++2a -Wall -Wextra -pedantic-errors -lSDL2 -o nes
 run:
 	./nes
