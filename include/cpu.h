@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 namespace Nes {
 	class Memory;
@@ -15,10 +16,21 @@ namespace Nes {
 		NEGATIVE          = 0x80
 	};
 
-	enum class Interrupt {
+	enum class InterruptType {
 		IRQ   = 0x01,
 		NMI   = 0x02,
 		RESET = 0x04
+	};
+
+	class Interrupt {
+		public:
+			Interrupt() = default;
+
+			bool needs_handle() const;
+			void set(InterruptType it, bool value);
+			std::optional<uint16_t> get_handler();
+		private:
+			uint8_t _value;
 	};
 
 	struct Registers {
@@ -42,7 +54,7 @@ namespace Nes {
 			void push_stack(uint8_t byte);
 			uint8_t pop_stack();
 
-			void request_interrupt(Interrupt i);
+			void request_interrupt(InterruptType i);
 			void handle_interrupt();
 
 			uint16_t immediate();
@@ -76,7 +88,7 @@ namespace Nes {
 
 			Memory &_mem;
 			Registers _regs;
-			uint8_t _interrupt;
+			Interrupt _interrupt;
 			uint8_t _cycles;
 			uint8_t _current_cycle;
 	};

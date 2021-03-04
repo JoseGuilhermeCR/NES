@@ -22,10 +22,36 @@ namespace Nes {
 		set_status(Status::ZERO, value == 0);	
 	}
 
+	bool Interrupt::needs_handle() const {
+		return _value != 0;
+	}
+
+	void Interrupt::set(InterruptType it, bool active) {
+		if (active)
+			_value |= static_cast<uint8_t>(it);
+		else
+			_value &= ~(static_cast<uint8_t>(it));
+	}
+
+	std::optional<uint16_t> Interrupt::get_handler() {
+		if ((_value & static_cast<uint8_t>(InterruptType::RESET)) != 0) {
+			set(InterruptType::RESET, false);
+			return 0xFFFC;
+		} else if ((_value & static_cast<uint8_t>(InterruptType::NMI)) != 0) {
+			set(InterruptType::NMI, false);
+			return 0xFFFA;
+		} else if ((_value & static_cast<uint8_t>(InterruptType::IRQ)) != 0) {
+			set(InterruptType::IRQ, false);
+			return 0xFFFE;
+		}
+
+		return std::nullopt;
+	}
+
 	Cpu::Cpu(Memory &memory)
 		:
 		_mem(memory),
-		_interrupt(static_cast<uint8_t>(Interrupt::RESET)),
+		_interrupt(),
 		_cycles(),
 		_current_cycle()
 	{
@@ -35,6 +61,9 @@ namespace Nes {
 		_regs.x  = 0x00;
 		_regs.y  = 0x00;
 		_regs.s  = 0x20;
+
+		// On startup, RESET is active.
+		_interrupt.set(InterruptType::RESET, true);
 	}
 
 	void Cpu::push_stack(uint8_t byte) {
@@ -45,24 +74,13 @@ namespace Nes {
 		return _mem.read_cpu_byte(++_regs.sp + 0x0100);
 	}
 
-	void Cpu::request_interrupt(Interrupt i) {
+	void Cpu::request_interrupt(InterruptType it) {
 		if (!_regs.check_status(Status::INTERRUPT_DISABLE))
-			_interrupt |= static_cast<uint8_t>(i);
+			_interrupt.set(it, true);
 	}
 
 	void Cpu::handle_interrupt() {
-		uint16_t handler;
-
-		if ((_interrupt & static_cast<uint8_t>(Interrupt::RESET)) != 0) {
-			handler = 0xFFFC;
-			_interrupt &= ~static_cast<uint8_t>(Interrupt::RESET);
-		} else if ((_interrupt & static_cast<uint8_t>(Interrupt::NMI)) != 0) {
-			handler = 0xFFFA;
-			_interrupt &= ~static_cast<uint8_t>(Interrupt::NMI);
-		} else if ((_interrupt & static_cast<uint8_t>(Interrupt::IRQ)) != 0) {
-			handler = 0xFFFE;
-			_interrupt &= ~static_cast<uint8_t>(Interrupt::IRQ);
-		}
+		uint16_t handler = _interrupt.get_handler().value();
 
 		push_stack(_regs.pc >> 8);
 		push_stack(_regs.pc & 0xFF);
@@ -156,11 +174,11 @@ namespace Nes {
 	void Cpu::emulate() {
 		if (_current_cycle < _cycles) {
 			++_current_cycle;
-			//std::cout << static_cast<uint16_t>(_current_cycle) << " of " << static_cast<uint16_t>(_cycles) << '\n';
+//			std::cout << static_cast<uint16_t>(_current_cycle) << " of " << static_cast<uint16_t>(_cycles) << '\n';
 			return;
 		}
 
-		if (_interrupt) {
+		if (_interrupt.needs_handle()) {
 			handle_interrupt();
 			return;
 		}
@@ -173,9 +191,9 @@ namespace Nes {
 		const uint8_t op1 = _mem.read_cpu_byte(_regs.pc + 1);
 		const uint8_t op2 = _mem.read_cpu_byte(_regs.pc + 2);
 
-		//std::cout << std::hex;
-//		std::cout << static_cast<uint16_t>(opcode) << ' ' << static_cast<uint16_t>(op1) << ' ' << static_cast<uint16_t>(op2) << '\n';
-//		std::cout << std::dec;
+		std::cout << std::hex;
+		std::cout << static_cast<uint16_t>(opcode) << ' ' << static_cast<uint16_t>(op1) << ' ' << static_cast<uint16_t>(op2) << '\n';
+		std::cout << std::dec;
 
 		++_regs.pc;
 
