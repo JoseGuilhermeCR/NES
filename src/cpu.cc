@@ -18,8 +18,8 @@ namespace Nes {
 	}
 
 	void Registers::set_zn_flags(uint8_t value) {
-		set_status(Status::NEGATIVE, value & 0x80);
-		set_status(Status::ZERO, value == 0);	
+		set_status(Status::negative, value & 0x80);
+		set_status(Status::zero, value == 0);	
 	}
 
 	bool Interrupt::needs_handle() const {
@@ -34,14 +34,14 @@ namespace Nes {
 	}
 
 	std::optional<uint16_t> Interrupt::get_handler() {
-		if ((_value & static_cast<uint8_t>(InterruptType::RESET)) != 0) {
-			set(InterruptType::RESET, false);
+		if ((_value & static_cast<uint8_t>(InterruptType::reset)) != 0) {
+			set(InterruptType::reset, false);
 			return 0xFFFC;
-		} else if ((_value & static_cast<uint8_t>(InterruptType::NMI)) != 0) {
-			set(InterruptType::NMI, false);
+		} else if ((_value & static_cast<uint8_t>(InterruptType::nmi)) != 0) {
+			set(InterruptType::nmi, false);
 			return 0xFFFA;
-		} else if ((_value & static_cast<uint8_t>(InterruptType::IRQ)) != 0) {
-			set(InterruptType::IRQ, false);
+		} else if ((_value & static_cast<uint8_t>(InterruptType::irq)) != 0) {
+			set(InterruptType::irq, false);
 			return 0xFFFE;
 		}
 
@@ -62,8 +62,8 @@ namespace Nes {
 		_regs.y  = 0x00;
 		_regs.s  = 0x20;
 
-		// On startup, RESET is active.
-		_interrupt.set(InterruptType::RESET, true);
+		// On startup, reset is active.
+		_interrupt.set(InterruptType::reset, true);
 	}
 
 	void Cpu::push_stack(uint8_t byte) {
@@ -75,7 +75,7 @@ namespace Nes {
 	}
 
 	void Cpu::request_interrupt(InterruptType it) {
-		if (!_regs.check_status(Status::INTERRUPT_DISABLE))
+		if (!_regs.check_status(Status::interrupt_disable))
 			_interrupt.set(it, true);
 	}
 
@@ -264,7 +264,7 @@ namespace Nes {
 					   uint8_t lo = _mem.read_cpu_byte(0xFFFE);
 					   uint8_t hi = _mem.read_cpu_byte(0xFFFF);
 					   _regs.pc = (static_cast<uint16_t>(hi) << 8) | static_cast<uint16_t>(lo);
-					   _regs.set_status(Status::BREAK, 1);
+					   _regs.set_status(Status::brk, 1);
 					   _cycles += 7;
 				   }
 				   break;
@@ -395,36 +395,36 @@ namespace Nes {
 				   _cycles += 2;
 				   break;
 			case 0x38:
-				   _regs.set_status(Status::CARRY, 1);
+				   _regs.set_status(Status::carry, 1);
 				   _cycles += 2;
 				   break;
 			case 0x18:
-				   _regs.set_status(Status::CARRY, 0);
+				   _regs.set_status(Status::carry, 0);
 				   _cycles += 2;
 				   break;
 			case 0xB0:
-				   branch(relative(), Status::CARRY, 1);
+				   branch(relative(), Status::carry, 1);
 				   break;
 			case 0x90:
-				   branch(relative(), Status::CARRY, 0);
+				   branch(relative(), Status::carry, 0);
 				   break;
 			case 0xF0:
-				   branch(relative(), Status::ZERO, 1);
+				   branch(relative(), Status::zero, 1);
 				   break;
 			case 0x30:
-				   branch(relative(), Status::NEGATIVE, 1);
+				   branch(relative(), Status::negative, 1);
 				   break;
 			case 0xD0:
-				   branch(relative(), Status::ZERO, 0);
+				   branch(relative(), Status::zero, 0);
 				   break;
 			case 0x10:
-				   branch(relative(), Status::NEGATIVE, 0);
+				   branch(relative(), Status::negative, 0);
 				   break;
 			case 0x50:
-				   branch(relative(), Status::OVERFLOW, 0);
+				   branch(relative(), Status::overflow, 0);
 				   break;
 			case 0x70:
-				   branch(relative(), Status::OVERFLOW, 1);
+				   branch(relative(), Status::overflow, 1);
 				   break;
 			case 0x29:
 				   ana(immediate(), 0);
@@ -550,19 +550,19 @@ namespace Nes {
 				   bit(absolute(), 1);
 				   break;
 			case 0x78:
-				   _regs.set_status(Status::INTERRUPT_DISABLE, 1);
+				   _regs.set_status(Status::interrupt_disable, 1);
 				   _cycles += 2;
 				   break;
 			case 0xF8:
-				   _regs.set_status(Status::DECIMAL, 1);
+				   _regs.set_status(Status::decimal, 1);
 				   _cycles += 2;
 				   break;
 			case 0xD8:
-				   _regs.set_status(Status::DECIMAL, 0);
+				   _regs.set_status(Status::decimal, 0);
 				   _cycles += 2;
 				   break;
 			case 0xB8:
-				   _regs.set_status(Status::OVERFLOW, 0);
+				   _regs.set_status(Status::overflow, 0);
 				   _cycles += 2;
 				   break;
 			case 0x08:
@@ -754,13 +754,13 @@ namespace Nes {
 		if (ones_complement)
 			byte = ~byte;
 
-		uint8_t a = _regs.a + byte + _regs.check_status(Status::CARRY);
+		uint8_t a = _regs.a + byte + _regs.check_status(Status::carry);
 		bool overflow = (byte & 0x80) == (_regs.a & 0x80) && (byte & 0x80) != (a & 0x80);
 		bool carry = ((static_cast<uint16_t>(_regs.a) + static_cast<uint16_t>(byte)) & 0xFF00) != 0;
 
-		_regs.set_status(Status::OVERFLOW, overflow);
+		_regs.set_status(Status::overflow, overflow);
 		_regs.set_zn_flags(a);
-		_regs.set_status(Status::CARRY, carry);
+		_regs.set_status(Status::carry, carry);
 
 		_regs.a = a;
 		_cycles += 2 + extra_cycles;
@@ -800,9 +800,9 @@ namespace Nes {
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
 
-		_regs.set_status(Status::ZERO, (byte & _regs.a) == 0);
-		_regs.set_status(Status::OVERFLOW, byte & 0x40);
-		_regs.set_status(Status::NEGATIVE, byte & 0x80);
+		_regs.set_status(Status::zero, (byte & _regs.a) == 0);
+		_regs.set_status(Status::overflow, byte & 0x40);
+		_regs.set_status(Status::negative, byte & 0x80);
 
 		_cycles += 3 + extra_cycles;
 	}
@@ -811,9 +811,9 @@ namespace Nes {
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
 
-		_regs.set_status(Status::CARRY, reg >= byte);
-		_regs.set_status(Status::ZERO, reg == byte);
-		_regs.set_status(Status::NEGATIVE, ((reg - byte) & 0x80) != 0);
+		_regs.set_status(Status::carry, reg >= byte);
+		_regs.set_status(Status::zero, reg == byte);
+		_regs.set_status(Status::negative, ((reg - byte) & 0x80) != 0);
 
 		_cycles += 2 + extra_cycles;
 	}
@@ -821,7 +821,7 @@ namespace Nes {
 	void Cpu::lsr(uint16_t addr, uint8_t extra_cycles)
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
-		_regs.set_status(Status::CARRY, byte & 0x01);
+		_regs.set_status(Status::carry, byte & 0x01);
 
 		byte >>= 1;
 
@@ -832,7 +832,7 @@ namespace Nes {
 
 	void Cpu::lsr_a()
 	{
-		_regs.set_status(Status::CARRY, _regs.a & 0x01);
+		_regs.set_status(Status::carry, _regs.a & 0x01);
 
 		_regs.a >>= 1;
 
@@ -843,7 +843,7 @@ namespace Nes {
 	void Cpu::asl(uint16_t addr, uint8_t extra_cycles)
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
-		_regs.set_status(Status::CARRY, byte & 0x80);
+		_regs.set_status(Status::carry, byte & 0x80);
 
 		byte <<= 1;
 
@@ -854,7 +854,7 @@ namespace Nes {
 
 	void Cpu::asl_a()
 	{
-		_regs.set_status(Status::CARRY, _regs.a & 0x80);
+		_regs.set_status(Status::carry, _regs.a & 0x80);
 
 		_regs.a <<= 1;
 
@@ -865,9 +865,9 @@ namespace Nes {
 	void Cpu::ror(uint16_t addr, uint8_t extra_cycles)
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
-		uint8_t carry = _regs.check_status(Status::CARRY);
+		uint8_t carry = _regs.check_status(Status::carry);
 
-		_regs.set_status(Status::CARRY, byte & 0x01);
+		_regs.set_status(Status::carry, byte & 0x01);
 		byte = (byte >> 1) | (carry << 7);
 
 		_regs.set_zn_flags(byte);
@@ -877,9 +877,9 @@ namespace Nes {
 
 	void Cpu::ror_a()
 	{
-		uint8_t carry = _regs.check_status(Status::CARRY);
+		uint8_t carry = _regs.check_status(Status::carry);
 
-		_regs.set_status(Status::CARRY, _regs.a & 0x01);
+		_regs.set_status(Status::carry, _regs.a & 0x01);
 		_regs.a = (_regs.a >> 1) | (carry << 7);
 
 		_regs.set_zn_flags(_regs.a);
@@ -889,9 +889,9 @@ namespace Nes {
 	void Cpu::rol(uint16_t addr, uint8_t extra_cycles)
 	{
 		uint8_t byte = _mem.read_cpu_byte(addr);
-		uint8_t carry = _regs.check_status(Status::CARRY);
+		uint8_t carry = _regs.check_status(Status::carry);
 
-		_regs.set_status(Status::CARRY, byte & 0x80);
+		_regs.set_status(Status::carry, byte & 0x80);
 		byte = (byte << 1) | carry;
 
 		_regs.set_zn_flags(byte);
@@ -901,9 +901,9 @@ namespace Nes {
 
 	void Cpu::rol_a()
 	{
-		uint8_t carry = _regs.check_status(Status::CARRY);
+		uint8_t carry = _regs.check_status(Status::carry);
 
-		_regs.set_status(Status::CARRY, _regs.a & 0x80);
+		_regs.set_status(Status::carry, _regs.a & 0x80);
 		_regs.a = (_regs.a << 1) | carry;
 
 		_regs.set_zn_flags(_regs.a);

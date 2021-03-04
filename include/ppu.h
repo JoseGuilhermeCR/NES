@@ -7,15 +7,15 @@ namespace Nes {
 	class Window;
 
 	enum class PpuRegisters {
-		PPUCTRL   = 0x2000,
-		PPUMASK   = 0x2001,
-		PPUSTATUS = 0x2002,
-		OAMADDR   = 0x2003,
-		OAMDATA   = 0x2004,
-		PPUSCROLL = 0x2005,
-		PPUADDR   = 0x2006,
-		PPUDATA   = 0x2007,
-		OAMDMA    = 0x4014
+		ppuctrl   = 0x2000,
+		ppumask   = 0x2001,
+		ppustatus = 0x2002,
+		oamaddr   = 0x2003,
+		oamdata   = 0x2004,
+		ppuscroll = 0x2005,
+		ppuaddr   = 0x2006,
+		ppudata   = 0x2007,
+		oamdma    = 0x4014
 	};
 
 	class Ppu {

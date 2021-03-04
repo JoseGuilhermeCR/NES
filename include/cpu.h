@@ -7,19 +7,19 @@ namespace Nes {
 	class Memory;
 
 	enum class Status {
-		CARRY             = 0x01,
-		ZERO              = 0x02,
-		INTERRUPT_DISABLE = 0x04,
-		DECIMAL           = 0x08,
-		BREAK             = 0x10,
-		OVERFLOW          = 0x40,
-		NEGATIVE          = 0x80
+		carry             = 0x01,
+		zero              = 0x02,
+		interrupt_disable = 0x04,
+		decimal           = 0x08,
+		brk               = 0x10,
+		overflow          = 0x40,
+		negative          = 0x80
 	};
 
 	enum class InterruptType {
-		IRQ   = 0x01,
-		NMI   = 0x02,
-		RESET = 0x04
+		irq   = 0x01,
+		nmi   = 0x02,
+		reset = 0x04
 	};
 
 	class Interrupt {
