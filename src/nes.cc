@@ -108,9 +108,8 @@ namespace Nes {
 int main()
 {
 	Nes::Emulator emulator;
-	//if (emulator.load_rom("test_roms/nestest.nes"))
-	//	emulator.run();
-	if (emulator.load_rom("test_roms/dk.nes"))
+	if (emulator.load_rom("test_roms/nestest.nes"))
+//	if (emulator.load_rom("test_roms/dk.nes"))
 		emulator.run();
 
 	return 0;

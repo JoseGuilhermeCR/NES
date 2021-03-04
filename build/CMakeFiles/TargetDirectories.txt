@@ -1,0 +1,3 @@
+/home/joseguilhermecr/Documents/Dev/C++/NES/build/CMakeFiles/rebuild_cache.dir
+/home/joseguilhermecr/Documents/Dev/C++/NES/build/CMakeFiles/edit_cache.dir
+/home/joseguilhermecr/Documents/Dev/C++/NES/build/CMakeFiles/Nes.dir
