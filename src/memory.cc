@@ -8,7 +8,7 @@ namespace Nes {
 	{
 	}
 
-	void Memory::attach_cartridge(std::unique_ptr<Cartridge> &cart) {
+	void Memory::attach_cartridge(std::unique_ptr<Cartridge>& cart) {
 		_cart = std::move(cart);
 	}
 

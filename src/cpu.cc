@@ -716,7 +716,7 @@ namespace Nes {
 		}
 	}
 
-	void Cpu::load(uint16_t addr, uint8_t &reg, uint8_t extra_cycles)
+	void Cpu::load(uint16_t addr, uint8_t& reg, uint8_t extra_cycles)
 	{
 		reg = _mem.read_cpu_byte(addr);
 		_regs.set_zn_flags(reg);

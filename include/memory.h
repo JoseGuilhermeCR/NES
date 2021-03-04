@@ -11,7 +11,7 @@ namespace Nes {
 		public:
 			Memory();
 
-			void attach_cartridge(std::unique_ptr<Cartridge> &cart);
+			void attach_cartridge(std::unique_ptr<Cartridge>& cart);
 
 			bool is_cartridge_attached() const;
 

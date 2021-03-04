@@ -20,8 +20,8 @@ namespace Nes {
 		_mapper = std::make_unique<Mapper0>(_prg_banks, _chr_banks);
 
 		rom.seekg(16);
-		rom.read(reinterpret_cast<char *>(_prg.data()), _prg_banks * KIB_16);
-		rom.read(reinterpret_cast<char *>(_chr.data()), _chr_banks * KIB_8);
+		rom.read(reinterpret_cast<char*>(_prg.data()), _prg_banks * KIB_16);
+		rom.read(reinterpret_cast<char*>(_chr.data()), _chr_banks * KIB_8);
 	}
 	
 	void Cartridge::write_cpu_byte(uint16_t addr, uint8_t byte)

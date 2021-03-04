@@ -67,7 +67,7 @@ namespace Nes {
 			uint16_t indirect_indexed();
 			uint8_t relative();
 
-			void load(uint16_t addr, uint8_t &reg, uint8_t extra_cycles);
+			void load(uint16_t addr, uint8_t& reg, uint8_t extra_cycles);
 			void branch(uint8_t displacement, Status status, bool value_needed);
 			void store(uint16_t addr, uint8_t reg, uint8_t extra_cycles);
 			void adc(uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement);
@@ -86,7 +86,7 @@ namespace Nes {
 			void rol(uint16_t addr, uint8_t extra_cycles);
 			void rol_a();
 
-			Memory &_mem;
+			Memory& _mem;
 			Registers _regs;
 			Interrupt _interrupt;
 			uint8_t _cycles;

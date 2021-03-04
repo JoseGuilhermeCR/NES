@@ -22,10 +22,10 @@ namespace Nes {
 			void render();
 
 			bool is_open() const;
-			SDL_Renderer *get_renderer();
+			SDL_Renderer* get_renderer();
 		private:
-			SDL_Window *_window;
-			SDL_Renderer *_renderer;
+			SDL_Window* _window;
+			SDL_Renderer* _renderer;
 
 			bool _open;
 			uint32_t _width;

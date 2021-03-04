@@ -20,7 +20,7 @@ namespace Nes {
 
 	class Ppu {
 		public:
-			Ppu(Memory &memory, Window &window);
+			Ppu(Memory& memory, Window& window);
 
 			void emulate();
 		private:
@@ -29,8 +29,8 @@ namespace Nes {
 			void vertical_blanking_lines();
 			void post_render_scanline();
 
-			Window &_window;
-			Memory &_memory;
+			Window& _window;
+			Memory& _memory;
 
 			uint16_t _cycle;
 			uint16_t _scanline;

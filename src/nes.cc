@@ -62,7 +62,7 @@ namespace Nes {
 		//SDL_RenderFillRect(_renderer, &NES_RECT);
 		SDL_RenderPresent(_renderer);
 
-		SDL_Delay(16);
+//		SDL_Delay(16);
 	}
 
 	bool Window::is_open() const {
@@ -108,7 +108,9 @@ namespace Nes {
 int main()
 {
 	Nes::Emulator emulator;
-	if (emulator.load_rom("test_roms/nestest.nes"))
+	//if (emulator.load_rom("test_roms/nestest.nes"))
+	//	emulator.run();
+	if (emulator.load_rom("test_roms/dk.nes"))
 		emulator.run();
 
 	return 0;

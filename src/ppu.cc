@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace Nes {
-	Ppu::Ppu(Memory &memory, Window &window)
+	Ppu::Ppu(Memory& memory, Window& window)
 		:
 		_window(window),
 		_memory(memory),
