@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/Nes.dir/src/cartridge.cc.o CMakeFiles/Nes.dir/src/cpu.cc.o CMakeFiles/Nes.dir/src/memory.cc.o CMakeFiles/Nes.dir/src/nes.cc.o CMakeFiles/Nes.dir/src/ppu.cc.o -o Nes  -lSDL2 
