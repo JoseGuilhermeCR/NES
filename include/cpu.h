@@ -2,11 +2,13 @@
 
 #include <cstdint>
 #include <optional>
+#include <vector>
+#include <functional>
 
 namespace Nes {
 	class Memory;
 
-	enum class Status {
+	enum class Status : uint8_t {
 		carry             = 0x01,
 		zero              = 0x02,
 		interrupt_disable = 0x04,
@@ -16,10 +18,26 @@ namespace Nes {
 		negative          = 0x80
 	};
 
-	enum class InterruptType {
+	enum class InterruptType : uint8_t {
 		irq   = 0x01,
 		nmi   = 0x02,
 		reset = 0x04
+	};
+
+	enum class ADRMode {
+		implicit,
+		accumulator,
+		immediate,
+		zero_page,
+		zero_page_x,
+		zero_page_y,
+		relative,
+		absolute,
+		absolute_x,
+		absolute_y,
+		indirect,
+		indexed_indirect,
+		indirect_indexed
 	};
 
 	class Interrupt {
@@ -46,10 +64,29 @@ namespace Nes {
 		void set_zn_flags(uint8_t value);
 	};
 
+	class Cpu;
+
+	struct Instruction {
+		uint8_t opcode;
+		uint8_t cycles;
+		ADRMode addr_mode;
+		std::function<void (Cpu&, uint16_t)> execute;
+
+		Instruction(
+				uint8_t,
+				uint8_t,
+				ADRMode,
+				std::function<void (Cpu&, uint16_t)>
+			   );
+	};
+
 	class Cpu {
 		public:
+	
 			Cpu(Memory &memory);
 			void emulate();
+
+			void brk(uint16_t);
 		private:
 			void push_stack(uint8_t byte);
 			uint8_t pop_stack();
@@ -58,21 +95,28 @@ namespace Nes {
 			void handle_interrupt();
 
 			uint16_t immediate();
+
 			uint16_t absolute();
+			uint16_t absolute_x();
+			uint16_t absolute_y();
 			uint16_t absolute_indexed(uint8_t index);
+
 			uint16_t zeropage();
+			uint16_t zeropage_x();
+			uint16_t zeropage_y();
 			uint16_t zeropage_indexed(uint8_t index);
+
 			uint16_t indirect();
 			uint16_t indexed_indirect();
 			uint16_t indirect_indexed();
-			uint8_t relative();
+			uint8_t relative(); // TODO: CHANGE
 
 			void load(uint16_t addr, uint8_t& reg, uint8_t extra_cycles);
 			void branch(uint8_t displacement, Status status, bool value_needed);
 			void store(uint16_t addr, uint8_t reg, uint8_t extra_cycles);
 			void adc(uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement);
 			void ana(uint16_t addr, uint8_t extra_cycles);
-			void ora(uint16_t addr, uint8_t extra_cycles);
+			void ora(uint16_t addr);
 			void eor(uint16_t addr, uint8_t extra_cycles);
 			void inc_dec(uint16_t addr, uint8_t change, uint8_t extra_cycles);
 			void bit(uint16_t addr, uint8_t extra_cycles);
@@ -91,5 +135,7 @@ namespace Nes {
 			Interrupt _interrupt;
 			uint8_t _cycles;
 			uint8_t _current_cycle;
+
+			static const std::vector<std::optional<Instruction>> s_instruction_table;
 	};
 }
