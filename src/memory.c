@@ -25,7 +25,7 @@ void write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 	}
 }
 
-uint8_t read_cpu_byte(struct Memory *mem, uint16_t addr)
+uint8_t read_cpu_byte(const struct Memory *mem, uint16_t addr)
 {
 	if (addr <= 0x1FFF) {
 		return mem->cpu_ram[addr & 0x7FF];
@@ -51,7 +51,7 @@ void write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 	}
 }
 
-uint8_t read_ppu_byte(struct Memory *mem, uint16_t addr)
+uint8_t read_ppu_byte(const struct Memory *mem, uint16_t addr)
 {
 	if (addr <= 0x1FFF) {				
 	} else if (addr >= 0x2000 && addr <= 0x2FFF) {

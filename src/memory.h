@@ -15,9 +15,9 @@ struct Memory {
 void memory_init(struct Memory *mem, struct Cartridge *cart);
 
 void write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_cpu_byte(struct Memory *mem, uint16_t addr);
+uint8_t read_cpu_byte(const struct Memory *mem, uint16_t addr);
 
 void write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_ppu_byte(struct Memory *mem, uint16_t addr);
+uint8_t read_ppu_byte(const struct Memory *mem, uint16_t addr);
 
 #endif
