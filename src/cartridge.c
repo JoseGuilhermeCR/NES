@@ -1,7 +1,7 @@
-#include "cartridge.h"
-
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "cartridge.h"
 
 struct mapper mappers[1] = {
 	{mapper0_cpu_write, mapper0_cpu_read}
@@ -33,12 +33,12 @@ uint8_t read_cpu_byte_cartridge(struct cartridge *cart, uint16_t addr)
 	return cart->prg[decoded];
 }
 
-uint32_t mapper0_cpu_write(struct cartridge* cart, uint16_t addr)
+uint32_t mapper0_cpu_write(struct cartridge *cart, uint16_t addr)
 {
 	return addr & (cart->prg_banks == 1 ? 0x3FFF : 0x7FFF);
 }
 
-uint32_t mapper0_cpu_read(struct cartridge* cart, uint16_t addr)
+uint32_t mapper0_cpu_read(struct cartridge *cart, uint16_t addr)
 {
 	return addr & (cart->prg_banks == 1 ? 0x3FFF : 0x7FFF);
 }

@@ -6,10 +6,6 @@
 #include "ppu.h"
 #include "memory.h"
 
-const uint32_t SCALE = 4;
-const uint32_t WIDTH = 256 * SCALE; 
-const uint32_t HEIGHT = 240 * SCALE;
-
 struct nes {
 	uint8_t debug;
 
@@ -23,5 +19,9 @@ struct nes {
 	uint8_t paused;
 	uint8_t running;
 };
+
+const uint32_t SCALE = 4;
+const uint32_t WIDTH = 256 * SCALE; 
+const uint32_t HEIGHT = 240 * SCALE;
 
 #endif

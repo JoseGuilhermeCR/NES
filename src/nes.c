@@ -1,15 +1,18 @@
-#include "nes.h"
-#include "cartridge.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
-const uint32_t KIB_16 = 16 * 1024;
-const uint32_t KIB_8 = 8 * 1024;
+#include "cartridge.h"
+#include "nes.h"
 
-static void file_to_cart(struct cartridge *cart, const char *filename)
+static const uint32_t KIB_16 = 16 * 1024;
+static const uint32_t KIB_8 = 8 * 1024;
+
+static void
+file_to_cart(struct cartridge *cart, const char *filename)
 {
-	FILE *rom = fopen(filename, "r");
+	FILE *rom;
+	
+	rom = fopen(filename, "r");
 
 	/* Just read nestest for now. */
 	cart->mapper = &mappers[0];
@@ -26,11 +29,13 @@ static void file_to_cart(struct cartridge *cart, const char *filename)
 	fclose(rom);
 }
 
-int main()
+int32_t
+main()
 {
-	SDL_Init(SDL_INIT_VIDEO);
 	struct nes nes;
 	struct cartridge cart;
+
+	SDL_Init(SDL_INIT_VIDEO);
 
 	nes.paused = 0;
 	nes.running = 1;

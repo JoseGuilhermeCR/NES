@@ -11,15 +11,15 @@ struct cartridge {
 	struct mapper *mapper;
 };
 
-void write_cpu_byte_cartridge(struct cartridge *cart, uint16_t addr, uint8_t byte);
-uint8_t read_cpu_byte_cartridge(struct cartridge *cart, uint16_t addr);
-
-void destroy_cartridge(struct cartridge *cart);
-
 struct mapper {
 	uint32_t (*map_cpu_write)(struct cartridge*, uint16_t);
 	uint32_t (*map_cpu_read)(struct cartridge*, uint16_t);
 };
+
+void write_cpu_byte_cartridge(struct cartridge *cart, uint16_t addr, uint8_t byte);
+uint8_t read_cpu_byte_cartridge(struct cartridge *cart, uint16_t addr);
+
+void destroy_cartridge(struct cartridge *cart);
 
 uint32_t mapper0_cpu_write(struct cartridge*, uint16_t);
 uint32_t mapper0_cpu_read(struct cartridge*, uint16_t);
