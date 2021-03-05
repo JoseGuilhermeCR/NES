@@ -12,9 +12,9 @@ struct nes {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 
-	struct cpu cpu;
-	struct ppu ppu;
-	struct memory mem;
+	struct Cpu cpu;
+	struct Ppu ppu;
+	struct Memory mem;
 
 	uint8_t paused;
 	uint8_t running;

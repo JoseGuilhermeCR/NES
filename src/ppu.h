@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct memory;
+struct Memory;
 
 enum PpuRegisters {
 	PPUCTRL   = 0x2000,
@@ -17,12 +17,15 @@ enum PpuRegisters {
 	OAMDMA    = 0x4014
 };
 
-struct ppu {
-	struct memory *mem;
+struct Ppu {
+	struct Memory *mem;
+
 	uint8_t odd_frame;
+	uint16_t scanline;
+	uint16_t cycle;
 };
 
-void init_ppu(struct ppu *ppu, struct memory *mem);
-void emulate_ppu(struct ppu *ppu);
+void ppu_init(struct Ppu *ppu, struct Memory *mem);
+void ppu_emulate(struct Ppu *ppu);
 
 #endif

@@ -4,11 +4,13 @@
 #include "cartridge.h"
 #include "nes.h"
 
+// TODO: Refactor main function and cartridge logic.
+
 static const uint32_t KIB_16 = 16 * 1024;
 static const uint32_t KIB_8 = 8 * 1024;
 
 static void
-file_to_cart(struct cartridge *cart, const char *filename)
+file_to_cart(struct Cartridge *cart, const char *filename)
 {
 	FILE *rom;
 	
@@ -33,7 +35,9 @@ int32_t
 main()
 {
 	struct nes nes;
-	struct cartridge cart;
+	struct Cartridge cart;
+	uint8_t finished_instruction;
+	SDL_Event e;
 
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -63,15 +67,14 @@ main()
 
 	file_to_cart(&cart, "test_roms/nestest.nes");
 
-	init_memory(&nes.mem, &cart);
-	init_cpu(&nes.cpu, &nes.mem);
-	init_ppu(&nes.ppu, &nes.mem);
+	memory_init(&nes.mem, &cart);
+	cpu_init(&nes.cpu, &nes.mem);
+	ppu_init(&nes.ppu, &nes.mem);
 
 //	nes.cpu.regs.pc = 0xC000;
 //	nes.cpu.interrupt = 0;
 
 	while (nes.running) {
-		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT)
 				nes.running = 0;
@@ -81,11 +84,15 @@ main()
 		}
 
 		if (!nes.paused) {
-			emulate_cpu(&nes.cpu);
+			finished_instruction = cpu_emulate(&nes.cpu);
 
-			emulate_ppu(&nes.ppu);
-			emulate_ppu(&nes.ppu);
-			emulate_ppu(&nes.ppu);
+			ppu_emulate(&nes.ppu);
+			ppu_emulate(&nes.ppu);
+			ppu_emulate(&nes.ppu);
+
+			if (finished_instruction)
+				printf("PPU: %i, %i CYC:%li\n", nes.ppu.scanline, nes.ppu.cycle, nes.cpu.total_cycles);
+				
 		}
 
 		SDL_SetRenderDrawColor(nes.renderer, 0, 0, 0, 255);
@@ -102,7 +109,7 @@ main()
 	SDL_DestroyWindow(nes.window);
 	SDL_Quit();
 
-	destroy_cartridge(&cart);
+	cartridge_destroy(&cart);
 
 	return 0;
 }

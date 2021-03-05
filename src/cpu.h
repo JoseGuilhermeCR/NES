@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct memory;
+struct Memory;
 
 enum Status {
 	CARRY             = 0x01,
@@ -21,7 +21,12 @@ enum Interrupt {
 	RESET = 0x04
 };
 
-struct registers {
+enum AddressingMode {
+	IMPLICIT = 1,
+	RELATIVE,
+};
+
+struct Registers {
 	uint16_t pc; /* Program Counter */
 	uint8_t  sp; /* Stack Pointer */
 	uint8_t   a; /* Accumulator */
@@ -30,16 +35,18 @@ struct registers {
 	uint8_t   s; /* Status register */
 };
 
-struct cpu {
-	struct registers regs;
-	struct memory *mem;
+struct Cpu {
+	struct Registers regs;
+	struct Memory *mem;
 
 	uint8_t interrupt;
 	uint8_t cycles;
 	uint8_t current_cycle;
+
+	uint64_t total_cycles;
 };
 
-void init_cpu(struct cpu *cpu, struct memory *mem);
-void emulate_cpu(struct cpu *cpu);
+void cpu_init(struct Cpu *cpu, struct Memory *mem);
+uint8_t cpu_emulate(struct Cpu *cpu);
 
 #endif

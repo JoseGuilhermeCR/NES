@@ -1,11 +1,50 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "cpu.h"
 #include "memory.h"
 
+struct Instruction {
+	const char *mnemonic;
+	uint8_t opcode;
+	enum AddressingMode adr_mode;
+};
+
+union InstructionOrNothing {
+	const void *valid;
+	struct Instruction instr;
+};
+
+static union InstructionOrNothing g_instruction_table[] = {
+	{.instr = {"BRK", 0x00, IMPLICIT}},
+	{NULL},
+};
+
 static void
-print_stack(const struct cpu *cpu)
+debug_instruction(
+	const struct Cpu *cpu,
+	uint8_t opcode,
+	uint8_t op1,
+	uint8_t op2
+	)
+{
+	union InstructionOrNothing possible_instr;
+	struct Instruction instr;
+
+	possible_instr = g_instruction_table[0];
+	if (!possible_instr.valid) {
+		puts("Trying to debug an unkown opcode.");
+		return;
+	}
+
+	instr = possible_instr.instr;
+
+	assert(opcode == instr.opcode);
+}
+
+static void
+print_stack(const struct Cpu *cpu)
 {
 	uint16_t i;
 	uint8_t byte; 
@@ -23,34 +62,34 @@ print_stack(const struct cpu *cpu)
 }
 
 static void
-print_registers(const struct registers *regs)
+print_registers(const struct Registers *regs)
 {
 	printf("pc: %04X sp: %02X s: %02X "
-		"x: %02X y: %02X a: %02x\n",
+		"x: %02X y: %02X a: %02x ",
 		regs->pc, regs->sp, regs->s,
 		regs->x, regs->y, regs->a);
 }
 
 static void
-push_stack(struct cpu *cpu, uint8_t byte)
+push_stack(struct Cpu *cpu, uint8_t byte)
 {
 	write_cpu_byte(cpu->mem, cpu->regs.sp-- + 0x0100, byte);
 }
 
 static uint8_t
-pop_stack(struct cpu *cpu)
+pop_stack(struct Cpu *cpu)
 {
 	return read_cpu_byte(cpu->mem, ++cpu->regs.sp + 0x0100);
 }
 
 static uint8_t
-check_status(struct cpu *cpu, enum Status s)
+check_status(struct Cpu *cpu, enum Status s)
 {
 	return (cpu->regs.s & (uint8_t)s) != 0;
 }
 
 static void
-set_status(struct cpu *cpu, enum Status s, uint8_t active)
+set_status(struct Cpu *cpu, enum Status s, uint8_t active)
 {
 	if (active)
 		cpu->regs.s |= (uint8_t)s;
@@ -61,21 +100,21 @@ set_status(struct cpu *cpu, enum Status s, uint8_t active)
 }
 
 static void
-set_zn_flags(struct cpu *cpu, uint8_t value)
+set_zn_flags(struct Cpu *cpu, uint8_t value)
 {
 	set_status(cpu, NEGATIVE, value & 0x80);
 	set_status(cpu, ZERO, value == 0);	
 }
 
 static void
-request_interrupt(struct cpu *cpu, enum Interrupt i)
+request_interrupt(struct Cpu *cpu, enum Interrupt i)
 {
 	if (!check_status(cpu, INTERRUPT_DISABLE))
 		cpu->interrupt |= (uint8_t)i;
 }
 
 static void
-handle_interrupt(struct cpu *cpu)
+handle_interrupt(struct Cpu *cpu)
 {
 	uint16_t handler;
 	uint8_t lo, hi;
@@ -104,7 +143,7 @@ handle_interrupt(struct cpu *cpu)
 }
 
 static uint16_t
-absolute(struct cpu *cpu)
+absolute(struct Cpu *cpu)
 {
 	uint8_t lo;
 	uint8_t hi;
@@ -120,7 +159,7 @@ absolute(struct cpu *cpu)
 }
 
 static uint16_t
-absolute_indexed(struct cpu *cpu, uint8_t index)
+absolute_indexed(struct Cpu *cpu, uint8_t index)
 {
 	uint8_t lo, hi;
 	uint16_t absolute, addr;
@@ -138,14 +177,14 @@ absolute_indexed(struct cpu *cpu, uint8_t index)
 }
 
 static uint16_t
-immediate(struct cpu *cpu)
+immediate(struct Cpu *cpu)
 {
 	printf("immediate -> addr: %02X ", cpu->regs.pc);
 	return cpu->regs.pc++;
 }
 
 static uint16_t
-zeropage(struct cpu *cpu)
+zeropage(struct Cpu *cpu)
 {
 	uint8_t addr;
 
@@ -156,7 +195,7 @@ zeropage(struct cpu *cpu)
 }
 
 static uint16_t
-zeropage_indexed(struct cpu *cpu, uint8_t index)
+zeropage_indexed(struct Cpu *cpu, uint8_t index)
 {
 	uint8_t byte;
 	uint16_t addr;
@@ -169,7 +208,7 @@ zeropage_indexed(struct cpu *cpu, uint8_t index)
 }
 
 static uint8_t
-relative(struct cpu *cpu)
+relative(struct Cpu *cpu)
 {
 	uint8_t byte;
 	
@@ -180,7 +219,7 @@ relative(struct cpu *cpu)
 }
 
 static uint16_t
-indirect(struct cpu *cpu)
+indirect(struct Cpu *cpu)
 {
 	uint8_t lo, hi;
 	uint16_t addr, iaddr;
@@ -198,7 +237,7 @@ indirect(struct cpu *cpu)
 }
 
 static uint16_t
-indexed_indirect(struct cpu *cpu)
+indexed_indirect(struct Cpu *cpu)
 {
 	uint8_t zp_addr, lo, hi;
 	uint16_t addr;
@@ -215,7 +254,7 @@ indexed_indirect(struct cpu *cpu)
 
 // TODO: page cross 1+ cycle
 static uint16_t
-indirect_indexed(struct cpu *cpu)
+indirect_indexed(struct Cpu *cpu)
 {
 	uint8_t zp_addr, lo, hi;
 	uint16_t addr;
@@ -233,7 +272,7 @@ indirect_indexed(struct cpu *cpu)
 }
 
 static void
-load(struct cpu *cpu, uint16_t addr, uint8_t *reg, uint8_t extra_cycles)
+load(struct Cpu *cpu, uint16_t addr, uint8_t *reg, uint8_t extra_cycles)
 {
 	*reg = read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, *reg);
@@ -241,16 +280,14 @@ load(struct cpu *cpu, uint16_t addr, uint8_t *reg, uint8_t extra_cycles)
 }
 
 static void
-branch(struct cpu *cpu, uint8_t displacement, enum Status status, uint8_t value_needed)
+branch(struct Cpu *cpu, uint8_t displacement, enum Status status, uint8_t value_needed)
 {
 	uint8_t old_lo;
 
 	cpu->cycles += 2;
 	if (check_status(cpu, status) == value_needed) {
-		printf("\nUnsigned: %02X Signed: %i\n", displacement, (int8_t)displacement);
-
 		old_lo = (uint8_t)(cpu->regs.pc & 0xFF);
-		// TODO: Maybe fix? displacement seems to work for now.
+		/* TODO: Maybe fix? displacement seems to work for now. */
 		if (displacement & 0x80)
 			cpu->regs.pc += (int8_t)displacement;
 		else
@@ -264,14 +301,14 @@ branch(struct cpu *cpu, uint8_t displacement, enum Status status, uint8_t value_
 }
 
 static void
-store(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
+store(struct Cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 {
 	write_cpu_byte(cpu->mem, addr, reg);
 	cpu->cycles += 3 + extra_cycles;
 }
 
 static void
-adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement)
+adc(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement)
 {
 	uint8_t byte, a, overflow, carry;
 
@@ -293,7 +330,7 @@ adc(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complemen
 }
 
 static void
-and(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+and(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a &= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
@@ -301,7 +338,7 @@ and(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-ora(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+ora(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a |= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
@@ -309,7 +346,7 @@ ora(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-eor(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+eor(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a ^= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
@@ -317,7 +354,7 @@ eor(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-inc_dec(struct cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
+inc_dec(struct Cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
 {
 	uint8_t byte;
 	
@@ -329,7 +366,7 @@ inc_dec(struct cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
 }
 
 static void
-bit(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+bit(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte;
 	
@@ -343,7 +380,7 @@ bit(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-cmp(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
+cmp(struct Cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 {
 	uint8_t byte;
 	
@@ -357,7 +394,7 @@ cmp(struct cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 }
 
 static void
-lsr(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+lsr(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte;
 
@@ -372,7 +409,7 @@ lsr(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-lsr_a(struct cpu *cpu)
+lsr_a(struct Cpu *cpu)
 {
 	set_status(cpu, CARRY, cpu->regs.a & 0x01);
 
@@ -383,7 +420,7 @@ lsr_a(struct cpu *cpu)
 }
 
 static void
-asl(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+asl(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte;
 
@@ -398,7 +435,7 @@ asl(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-asl_a(struct cpu *cpu)
+asl_a(struct Cpu *cpu)
 {
 	set_status(cpu, CARRY, cpu->regs.a & 0x80);
 
@@ -409,7 +446,7 @@ asl_a(struct cpu *cpu)
 }
 
 static void
-ror(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+ror(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte, carry;
 
@@ -425,7 +462,7 @@ ror(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-ror_a(struct cpu *cpu)
+ror_a(struct Cpu *cpu)
 {
 	uint8_t carry;
 	
@@ -439,7 +476,7 @@ ror_a(struct cpu *cpu)
 }
 
 static void
-rol(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+rol(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte, carry;
 
@@ -455,7 +492,7 @@ rol(struct cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 }
 
 static void
-rol_a(struct cpu *cpu)
+rol_a(struct Cpu *cpu)
 {
 	uint8_t carry;
 
@@ -468,32 +505,34 @@ rol_a(struct cpu *cpu)
 	cpu->cycles += 2;
 }
 
-// TODO: Unnoficial opcodes need to be implemented... for now let's try to work with this and try to get the ppu a start as well.
-// Work on a better way to print instructions on the screen.
-void
-emulate_cpu(struct cpu *cpu)
+/* TODO: Unnoficial opcodes need to be implemented... for now let's try to work with this and try to get the ppu a start as well.
+ * Work on a better way to print instructions on the screen. 
+ */
+uint8_t
+cpu_emulate(struct Cpu *cpu)
 {
-//	static uint32_t cyc = 0;
 	uint8_t opcode, op1, op2;
 
+	/* Is the current instruction in execution? */
 	if (cpu->current_cycle < cpu->cycles) {
 		++cpu->current_cycle;
-		printf("%i of %i\n", cpu->current_cycle, cpu->cycles);
-		return;
+		return 0;
 	}
 
 	if (cpu->interrupt) {
 		handle_interrupt(cpu);
-		return;
+		return 0;
 	}
 
 	cpu->cycles = 0;
 	cpu->current_cycle = 0;
 
+	/* Fetch new instruction's info */
 	opcode = read_cpu_byte(cpu->mem, cpu->regs.pc);
-	// Not a good idea, but leave it here for now.
 	op1 = read_cpu_byte(cpu->mem, cpu->regs.pc + 1);
 	op2 = read_cpu_byte(cpu->mem, cpu->regs.pc + 2);
+
+	debug_instruction(cpu, opcode, op1, op2);
 
 	printf("%02X %02X %02X -> ", opcode, op1, op2);
 
@@ -548,7 +587,6 @@ emulate_cpu(struct cpu *cpu)
 	case 0xF1:
 		adc(cpu, indirect_indexed(cpu), 3, 1);
 		break;
-	// JMP
 	case 0x4C:
 		cpu->regs.pc = absolute(cpu);
 		cpu->cycles += 3;
@@ -557,7 +595,6 @@ emulate_cpu(struct cpu *cpu)
 		cpu->regs.pc = indirect(cpu);
 		cpu->cycles += 5;
 		break;
-	// BRK
 	case 0x00: {
 		uint8_t lo;
 		uint8_t hi;
@@ -574,7 +611,6 @@ emulate_cpu(struct cpu *cpu)
 		cpu->cycles += 7;
 		break;
 	}
-	// RTI
 	case 0x40: {
 		uint8_t lo;
 		uint8_t hi;
@@ -1025,15 +1061,16 @@ emulate_cpu(struct cpu *cpu)
 		break;
 	}
 
-	//cyc += cpu->cycles;
-	//cpu->cycles = 0;
-	//printf("CYC: %i ", cyc);
 	print_registers(&cpu->regs);
+
+	/* Finished an instruction. */
+	cpu->total_cycles += cpu->cycles;
+	return 1;
 }
 
-void init_cpu(struct cpu *cpu, struct memory *mem)
+void cpu_init(struct Cpu *cpu, struct Memory *mem)
 {
-	struct registers regs;
+	struct Registers regs;
 
 	regs.pc = 0x0000;
 	regs.sp = 0xFF;
@@ -1047,4 +1084,5 @@ void init_cpu(struct cpu *cpu, struct memory *mem)
 	cpu->interrupt = (uint8_t)RESET;
 	cpu->cycles = 0;
 	cpu->current_cycle = 0;
+	cpu->total_cycles = 0;
 }
