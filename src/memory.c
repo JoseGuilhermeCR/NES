@@ -5,8 +5,7 @@
 #include "memory.h"
 #include "cartridge.h"
 
-void
-memory_init(struct Memory *mem, struct Cartridge *cart)
+void memory_init(struct Memory *mem, struct Cartridge *cart)
 {
 	memset(mem->cpu_ram, 0, 2048);
 	memset(mem->ppu_ram, 0, 2000);
@@ -14,8 +13,7 @@ memory_init(struct Memory *mem, struct Cartridge *cart)
 	mem->cart = cart;
 }
 
-void
-write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
+void write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 {
 	if (addr <= 0x1FFF) {
 		mem->cpu_ram[addr & 0x7FF] = byte;
@@ -27,8 +25,7 @@ write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 	}
 }
 
-uint8_t
-read_cpu_byte(struct Memory *mem, uint16_t addr)
+uint8_t read_cpu_byte(struct Memory *mem, uint16_t addr)
 {
 	if (addr <= 0x1FFF) {
 		return mem->cpu_ram[addr & 0x7FF];
@@ -44,8 +41,7 @@ read_cpu_byte(struct Memory *mem, uint16_t addr)
 	return 0;
 }
 
-void
-write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
+void write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 {
 	if (addr <= 0x1FFF) {
 				
@@ -55,8 +51,7 @@ write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte)
 	}
 }
 
-uint8_t
-read_ppu_byte(struct Memory *mem, uint16_t addr)
+uint8_t read_ppu_byte(struct Memory *mem, uint16_t addr)
 {
 	if (addr <= 0x1FFF) {				
 	} else if (addr >= 0x2000 && addr <= 0x2FFF) {

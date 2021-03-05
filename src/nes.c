@@ -9,12 +9,9 @@
 static const uint32_t KIB_16 = 16 * 1024;
 static const uint32_t KIB_8 = 8 * 1024;
 
-static void
-file_to_cart(struct Cartridge *cart, const char *filename)
+static void file_to_cart(struct Cartridge *cart, const char *filename)
 {
-	FILE *rom;
-	
-	rom = fopen(filename, "r");
+	FILE *rom = fopen(filename, "r");
 
 	/* Just read nestest for now. */
 	cart->mapper = &mappers[0];
@@ -31,8 +28,7 @@ file_to_cart(struct Cartridge *cart, const char *filename)
 	fclose(rom);
 }
 
-int32_t
-main()
+int32_t main()
 {
 	struct nes nes;
 	struct Cartridge cart;

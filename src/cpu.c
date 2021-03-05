@@ -16,35 +16,30 @@ union InstructionOrNothing {
 	struct Instruction instr;
 };
 
-static union InstructionOrNothing g_instruction_table[] = {
+static const union InstructionOrNothing g_instruction_table[] = {
 	{.instr = {"BRK", 0x00, IMPLICIT}},
 	{NULL},
 };
 
-static void
-debug_instruction(
-	const struct Cpu *cpu,
-	uint8_t opcode,
-	uint8_t op1,
-	uint8_t op2
-	)
+static void debug_instruction(const struct Cpu *cpu, uint8_t opcode,
+			      uint8_t op1,
+			      uint8_t op2)
 {
-	union InstructionOrNothing possible_instr;
-	struct Instruction instr;
+	const union InstructionOrNothing *possible_instr = &g_instruction_table[0];
+	const struct Instruction *instr;	
 
-	possible_instr = g_instruction_table[0];
-	if (!possible_instr.valid) {
-		puts("Trying to debug an unkown opcode.");
+	/* An unkown instruction's union will have the valid field set to NULL */
+	if (!possible_instr->valid) {
+		puts("Trying to debug an unknown opcode.");
 		return;
 	}
 
-	instr = possible_instr.instr;
+	instr = &possible_instr->instr;
 
-	assert(opcode == instr.opcode);
+	assert(opcode == instr->opcode);
 }
 
-static void
-print_stack(const struct Cpu *cpu)
+static void print_stack(const struct Cpu *cpu)
 {
 	uint16_t i;
 	uint8_t byte; 
@@ -61,8 +56,7 @@ print_stack(const struct Cpu *cpu)
 	puts("\n-----------");
 }
 
-static void
-print_registers(const struct Registers *regs)
+static void print_registers(const struct Registers *regs)
 {
 	printf("pc: %04X sp: %02X s: %02X "
 		"x: %02X y: %02X a: %02x ",
@@ -70,26 +64,22 @@ print_registers(const struct Registers *regs)
 		regs->x, regs->y, regs->a);
 }
 
-static void
-push_stack(struct Cpu *cpu, uint8_t byte)
+static void push_stack(struct Cpu *cpu, uint8_t byte)
 {
 	write_cpu_byte(cpu->mem, cpu->regs.sp-- + 0x0100, byte);
 }
 
-static uint8_t
-pop_stack(struct Cpu *cpu)
+static uint8_t pop_stack(struct Cpu *cpu)
 {
 	return read_cpu_byte(cpu->mem, ++cpu->regs.sp + 0x0100);
 }
 
-static uint8_t
-check_status(struct Cpu *cpu, enum Status s)
+static uint8_t check_status(struct Cpu *cpu, enum Status s)
 {
 	return (cpu->regs.s & (uint8_t)s) != 0;
 }
 
-static void
-set_status(struct Cpu *cpu, enum Status s, uint8_t active)
+static void set_status(struct Cpu *cpu, enum Status s, uint8_t active)
 {
 	if (active)
 		cpu->regs.s |= (uint8_t)s;
@@ -99,22 +89,19 @@ set_status(struct Cpu *cpu, enum Status s, uint8_t active)
 	cpu->regs.s |= 0x20;
 }
 
-static void
-set_zn_flags(struct Cpu *cpu, uint8_t value)
+static void set_zn_flags(struct Cpu *cpu, uint8_t value)
 {
 	set_status(cpu, NEGATIVE, value & 0x80);
 	set_status(cpu, ZERO, value == 0);	
 }
 
-static void
-request_interrupt(struct Cpu *cpu, enum Interrupt i)
+static void request_interrupt(struct Cpu *cpu, enum Interrupt i)
 {
 	if (!check_status(cpu, INTERRUPT_DISABLE))
 		cpu->interrupt |= (uint8_t)i;
 }
 
-static void
-handle_interrupt(struct Cpu *cpu)
+static void handle_interrupt(struct Cpu *cpu)
 {
 	uint16_t handler;
 	uint8_t lo, hi;
@@ -142,8 +129,7 @@ handle_interrupt(struct Cpu *cpu)
 	cpu->cycles = 7;
 }
 
-static uint16_t
-absolute(struct Cpu *cpu)
+static uint16_t absolute(struct Cpu *cpu)
 {
 	uint8_t lo;
 	uint8_t hi;
@@ -158,8 +144,7 @@ absolute(struct Cpu *cpu)
 	return addr;
 }
 
-static uint16_t
-absolute_indexed(struct Cpu *cpu, uint8_t index)
+static uint16_t absolute_indexed(struct Cpu *cpu, uint8_t index)
 {
 	uint8_t lo, hi;
 	uint16_t absolute, addr;
@@ -169,22 +154,24 @@ absolute_indexed(struct Cpu *cpu, uint8_t index)
 	absolute = ((uint16_t)hi << 8) | (uint16_t)lo;
 	addr = absolute + (uint16_t)index;
 
-	printf("absolute_indexed -> absolute: %04X index: %02X addr: %04X ", absolute, index, addr);
+	printf("absolute_indexed -> absolute: %04X index: %02X addr: %04X ",
+		absolute,
+		index,
+		addr);
+	
 	if ((uint16_t)lo > (addr & 0xFF))
 		printf("page crossed ");
 
 	return addr;
 }
 
-static uint16_t
-immediate(struct Cpu *cpu)
+static uint16_t immediate(struct Cpu *cpu)
 {
 	printf("immediate -> addr: %02X ", cpu->regs.pc);
 	return cpu->regs.pc++;
 }
 
-static uint16_t
-zeropage(struct Cpu *cpu)
+static uint16_t zeropage(struct Cpu *cpu)
 {
 	uint8_t addr;
 
@@ -194,32 +181,28 @@ zeropage(struct Cpu *cpu)
 	return (uint16_t)addr;
 }
 
-static uint16_t
-zeropage_indexed(struct Cpu *cpu, uint8_t index)
+static uint16_t zeropage_indexed(struct Cpu *cpu, uint8_t index)
 {
-	uint8_t byte;
-	uint16_t addr;
+	uint8_t byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	uint16_t addr = (byte + index) % 0xFF;
 
-	byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
-	addr = (byte + index) % 0xFF;
-
-	printf("zeropage_indexed -> byte: %02X index: %02X addr: %04X ", byte, index, addr);
+	printf("zeropage_indexed -> byte: %02X index: %02X addr: %04X ",
+		byte,
+		index,
+		addr);
+	
 	return addr;
 }
 
-static uint8_t
-relative(struct Cpu *cpu)
+static uint8_t relative(struct Cpu *cpu)
 {
-	uint8_t byte;
-	
-	byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	uint8_t byte = read_cpu_byte(cpu->mem, cpu->regs.pc++);
 
 	printf("relative -> byte: %02X ", byte);
 	return byte;
 }
 
-static uint16_t
-indirect(struct Cpu *cpu)
+static uint16_t indirect(struct Cpu *cpu)
 {
 	uint8_t lo, hi;
 	uint16_t addr, iaddr;
@@ -236,8 +219,7 @@ indirect(struct Cpu *cpu)
 	return iaddr;
 }
 
-static uint16_t
-indexed_indirect(struct Cpu *cpu)
+static uint16_t indexed_indirect(struct Cpu *cpu)
 {
 	uint8_t zp_addr, lo, hi;
 	uint16_t addr;
@@ -248,13 +230,15 @@ indexed_indirect(struct Cpu *cpu)
 	hi = read_cpu_byte(cpu->mem, zp_addr + 1);
 	addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
-	printf("indexed_indirect -> zeropage_addr: %02x addr: %04x ", zp_addr, addr);
+	printf("indexed_indirect -> zeropage_addr: %02x addr: %04x ",
+		zp_addr,
+		addr);
+	
 	return addr;
 }
 
 // TODO: page cross 1+ cycle
-static uint16_t
-indirect_indexed(struct Cpu *cpu)
+static uint16_t indirect_indexed(struct Cpu *cpu)
 {
 	uint8_t zp_addr, lo, hi;
 	uint16_t addr;
@@ -265,22 +249,25 @@ indirect_indexed(struct Cpu *cpu)
 	hi = read_cpu_byte(cpu->mem, zp_addr + 1);
 	addr = (((uint16_t)hi << 8) | (uint16_t)lo) + (uint16_t)cpu->regs.y;
 
-	printf("indirect_indexed -> zeropage_addr: %02x addr: %04x ", zp_addr, addr);
+	printf("indirect_indexed -> zeropage_addr: %02x addr: %04x ",
+		zp_addr,
+		addr);
+	
 	if ((uint16_t)lo > (addr & 0xFF))
 		printf("page crossed ");
 	return addr;
 }
 
-static void
-load(struct Cpu *cpu, uint16_t addr, uint8_t *reg, uint8_t extra_cycles)
+static void load(struct Cpu *cpu, uint16_t addr, uint8_t *reg,
+		 uint8_t extra_cycles)
 {
 	*reg = read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, *reg);
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-branch(struct Cpu *cpu, uint8_t displacement, enum Status status, uint8_t value_needed)
+static void branch(struct Cpu *cpu, uint8_t displacement, enum Status status,
+		   uint8_t value_needed)
 {
 	uint8_t old_lo;
 
@@ -300,15 +287,15 @@ branch(struct Cpu *cpu, uint8_t displacement, enum Status status, uint8_t value_
 	}
 }
 
-static void
-store(struct Cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
+static void store(struct Cpu *cpu, uint16_t addr, uint8_t reg,
+		  uint8_t extra_cycles)
 {
 	write_cpu_byte(cpu->mem, addr, reg);
 	cpu->cycles += 3 + extra_cycles;
 }
 
-static void
-adc(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complement)
+static void adc(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles,
+		uint8_t ones_complement)
 {
 	uint8_t byte, a, overflow, carry;
 
@@ -329,48 +316,41 @@ adc(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles, uint8_t ones_complemen
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-and(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void and(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a &= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-ora(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void ora(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a |= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-eor(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void eor(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	cpu->regs.a ^= read_cpu_byte(cpu->mem, addr);
 	set_zn_flags(cpu, cpu->regs.a);
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-inc_dec(struct Cpu *cpu, uint16_t addr, uint8_t change, uint8_t extra_cycles)
+static void inc_dec(struct Cpu *cpu, uint16_t addr, uint8_t change,
+		    uint8_t extra_cycles)
 {
-	uint8_t byte;
+	uint8_t byte = read_cpu_byte(cpu->mem, addr) + change;
 	
-	byte = read_cpu_byte(cpu->mem, addr) + change;
 	write_cpu_byte(cpu->mem, addr, byte);
 
 	set_zn_flags(cpu, byte);
 	cpu->cycles += 5 + extra_cycles;
 }
 
-static void
-bit(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void bit(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte;
-	
-	byte = read_cpu_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
 	set_status(cpu, ZERO, (byte & cpu->regs.a) == 0);
 	set_status(cpu, OVERFLOW, byte & 0x40);
@@ -379,12 +359,10 @@ bit(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 3 + extra_cycles;
 }
 
-static void
-cmp(struct Cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
+static void cmp(struct Cpu *cpu, uint16_t addr, uint8_t reg,
+		uint8_t extra_cycles)
 {
-	uint8_t byte;
-	
-	byte = read_cpu_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
 	set_status(cpu, CARRY, reg >= byte);
 	set_status(cpu, ZERO, reg == byte);
@@ -393,12 +371,10 @@ cmp(struct Cpu *cpu, uint16_t addr, uint8_t reg, uint8_t extra_cycles)
 	cpu->cycles += 2 + extra_cycles;
 }
 
-static void
-lsr(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void lsr(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte;
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
 
-	byte = read_cpu_byte(cpu->mem, addr);
 	set_status(cpu, CARRY, byte & 0x01);
 
 	byte >>= 1;
@@ -408,8 +384,7 @@ lsr(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 5 + extra_cycles;
 }
 
-static void
-lsr_a(struct Cpu *cpu)
+static void lsr_a(struct Cpu *cpu)
 {
 	set_status(cpu, CARRY, cpu->regs.a & 0x01);
 
@@ -419,12 +394,10 @@ lsr_a(struct Cpu *cpu)
 	cpu->cycles += 2;
 }
 
-static void
-asl(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void asl(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
-	uint8_t byte;
-
-	byte = read_cpu_byte(cpu->mem, addr);
+	uint8_t byte = read_cpu_byte(cpu->mem, addr);
+	
 	set_status(cpu, CARRY, byte & 0x80);
 
 	byte <<= 1;
@@ -434,8 +407,7 @@ asl(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 5 + extra_cycles;
 }
 
-static void
-asl_a(struct Cpu *cpu)
+static void asl_a(struct Cpu *cpu)
 {
 	set_status(cpu, CARRY, cpu->regs.a & 0x80);
 
@@ -445,8 +417,7 @@ asl_a(struct Cpu *cpu)
 	cpu->cycles += 2;
 }
 
-static void
-ror(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void ror(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte, carry;
 
@@ -461,8 +432,7 @@ ror(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 5 + extra_cycles;
 }
 
-static void
-ror_a(struct Cpu *cpu)
+static void ror_a(struct Cpu *cpu)
 {
 	uint8_t carry;
 	
@@ -475,8 +445,7 @@ ror_a(struct Cpu *cpu)
 	cpu->cycles += 2;
 }
 
-static void
-rol(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
+static void rol(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 {
 	uint8_t byte, carry;
 
@@ -491,12 +460,9 @@ rol(struct Cpu *cpu, uint16_t addr, uint8_t extra_cycles)
 	cpu->cycles += 5 + extra_cycles;
 }
 
-static void
-rol_a(struct Cpu *cpu)
+static void rol_a(struct Cpu *cpu)
 {
-	uint8_t carry;
-
-	carry = check_status(cpu, CARRY);
+	uint8_t carry = check_status(cpu, CARRY);
 
 	set_status(cpu, CARRY, cpu->regs.a & 0x80);
 	cpu->regs.a = (cpu->regs.a << 1) | carry;
@@ -508,8 +474,7 @@ rol_a(struct Cpu *cpu)
 /* TODO: Unnoficial opcodes need to be implemented... for now let's try to work with this and try to get the ppu a start as well.
  * Work on a better way to print instructions on the screen. 
  */
-uint8_t
-cpu_emulate(struct Cpu *cpu)
+uint8_t cpu_emulate(struct Cpu *cpu)
 {
 	uint8_t opcode, op1, op2;
 

@@ -16,7 +16,8 @@ struct Mapper {
 	uint32_t (*map_cpu_read)(struct Cartridge*, uint16_t);
 };
 
-void write_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr, uint8_t byte);
+void write_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr,
+			      uint8_t byte);
 uint8_t read_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr);
 
 void cartridge_destroy(struct Cartridge *cart);

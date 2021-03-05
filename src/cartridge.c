@@ -21,7 +21,8 @@ void cartridge_destroy(struct Cartridge *cart)
 	cart->chr_banks = 0;
 }
 
-void write_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr, uint8_t byte)
+void write_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr,
+			      uint8_t byte)
 {
 	uint32_t decoded = cart->mapper->map_cpu_write(cart, addr);
 	cart->prg[decoded] = byte;
