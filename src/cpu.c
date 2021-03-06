@@ -798,6 +798,8 @@ void cpu_init(struct Cpu *cpu, struct Memory *mem)
 
 INSTR(brk)
 {
+	(void)addr;
+
 	uint8_t lo;
 	uint8_t hi;
 
@@ -833,6 +835,8 @@ INSTR(asl)
 
 INSTR(asl_a)
 {
+	(void)addr;
+
 	set_status(cpu, CARRY, cpu->regs.a & 0x80);
 	cpu->regs.a <<= 1;
 	set_zn_flags(cpu, cpu->regs.a);
@@ -840,6 +844,7 @@ INSTR(asl_a)
 
 INSTR(php)
 {
+	(void)addr;
 	push_stack(cpu, cpu->regs.s);
 }
 
@@ -850,6 +855,7 @@ INSTR(bpl)
 
 INSTR(clc)
 {
+	(void)addr;
 	set_status(cpu, CARRY, 0);
 }
 
@@ -893,6 +899,8 @@ INSTR(rol)
 
 INSTR(rol_a)
 {
+	(void)addr;
+
 	uint8_t carry = check_status(cpu, CARRY);
 
 	set_status(cpu, CARRY, cpu->regs.a & 0x80);
@@ -904,6 +912,7 @@ INSTR(rol_a)
 
 INSTR(plp)
 {
+	(void)addr;
 	cpu->regs.s = pop_stack(cpu);
 }
 
@@ -914,11 +923,13 @@ INSTR(bmi)
 
 INSTR(sec)
 {
+	(void)addr;
 	set_status(cpu, CARRY, 1);
 }
 
 INSTR(rti)
 {
+	(void)addr;
 	uint8_t lo, hi;
 
 	cpu->regs.s = pop_stack(cpu);
@@ -947,6 +958,8 @@ INSTR(lsr)
 
 INSTR(lsr_a)
 {
+	(void)addr;
+
 	set_status(cpu, CARRY, cpu->regs.a & 0x01);
 
 	cpu->regs.a >>= 1;
@@ -956,6 +969,8 @@ INSTR(lsr_a)
 
 INSTR(pha)
 {
+	(void)addr;
+
 	push_stack(cpu, cpu->regs.a);
 }
 
@@ -972,11 +987,14 @@ INSTR(bvc)
 
 INSTR(cli)
 {
+	(void)addr;
 	set_status(cpu, INTERRUPT_DISABLE, 0);
 }
 
 INSTR(rts)
 {
+	(void)addr;
+
 	uint8_t lo = pop_stack(cpu);
 	uint8_t hi = pop_stack(cpu);
 	cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
@@ -1005,6 +1023,8 @@ INSTR(ror)
 
 INSTR(ror_a)
 {
+	(void)addr;
+
 	uint8_t carry;
 	
 	carry = check_status(cpu, CARRY);
@@ -1017,6 +1037,8 @@ INSTR(ror_a)
 
 INSTR(pla)
 {
+	(void)addr;
+
 	cpu->regs.a = pop_stack(cpu);
 	set_zn_flags(cpu, cpu->regs.a);
 }
@@ -1028,6 +1050,7 @@ INSTR(bvs)
 
 INSTR(sei)
 {
+	(void)addr;
 	set_status(cpu, INTERRUPT_DISABLE, 1);
 }
 
@@ -1048,12 +1071,16 @@ INSTR(stx)
 
 INSTR(dey)
 {
+	(void)addr;
+
 	--cpu->regs.y;
 	set_zn_flags(cpu, cpu->regs.y);
 }
 
 INSTR(txa)
 {
+	(void)addr;
+
 	cpu->regs.a = cpu->regs.x;
 	set_zn_flags(cpu, cpu->regs.a);
 }
@@ -1065,12 +1092,16 @@ INSTR(bcc)
 
 INSTR(tya)
 {
+	(void)addr;
+
 	cpu->regs.a = cpu->regs.y;
 	set_zn_flags(cpu, cpu->regs.a);
 }
 
 INSTR(txs)
 {
+	(void)addr;
+
 	cpu->regs.sp = cpu->regs.x;
 }
 
@@ -1094,12 +1125,16 @@ INSTR(ldx)
 
 INSTR(tay)
 {
+	(void)addr;
+
 	cpu->regs.y = cpu->regs.a;
 	set_zn_flags(cpu, cpu->regs.y);
 }
 
 INSTR(tax)
 {
+	(void)addr;
+
 	cpu->regs.x = cpu->regs.a;
 	set_zn_flags(cpu, cpu->regs.x);
 }
@@ -1111,11 +1146,15 @@ INSTR(bcs)
 
 INSTR(clv)
 {
+	(void)addr;
+
 	set_status(cpu, OVERFLOW, 0);
 }
 
 INSTR(tsx)
 {
+	(void)addr;
+
 	cpu->regs.x = cpu->regs.sp;
 	set_zn_flags(cpu, cpu->regs.x);
 }
@@ -1137,12 +1176,16 @@ INSTR(dec)
 
 INSTR(iny)
 {
+	(void)addr;
+
 	++cpu->regs.y;
 	set_zn_flags(cpu, cpu->regs.y);
 }
 
 INSTR(dex)
 {
+	(void)addr;
+
 	--cpu->regs.x;
 	set_zn_flags(cpu, cpu->regs.x);
 }
@@ -1154,6 +1197,8 @@ INSTR(bne)
 
 INSTR(cld)
 {
+	(void)addr;
+
 	set_status(cpu, DECIMAL, 0);
 }
 
@@ -1174,6 +1219,8 @@ INSTR(inc)
 
 INSTR(inx)
 {
+	(void)addr;
+
 	++cpu->regs.x;
 	set_zn_flags(cpu, cpu->regs.x);
 }
@@ -1185,6 +1232,8 @@ INSTR(beq)
 
 INSTR(sed)
 {
+	(void)addr;
+	
 	set_status(cpu, DECIMAL, 1);
 }
 
