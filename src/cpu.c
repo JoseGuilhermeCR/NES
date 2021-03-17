@@ -132,13 +132,13 @@ static union AddrDecodeInfo {
 
 	struct {
 		uint16_t addr;
-		uint16_t zp_addr;
-		uint8_t x;
+		uint8_t zp_addr;
+		uint8_t zp_x_addr;
 	} indexed_indirect;
 
 	struct {
 		uint16_t addr;
-		uint16_t zp_addr;
+		uint8_t zp_addr;
 		uint8_t y;
 	} indirect_indexed;
 } g_addr_decoded_info;
@@ -429,10 +429,22 @@ static void debug_instruction(const struct Memory *mem,
 				g_addr_decoded_info.zeropage.addr));
 		break;
 	case ZEROPAGE_X:
-		
+		printf("%02X %s $%02X,X @ %02X = %02X",
+			op1,
+			instr->mnemonic,
+			g_addr_decoded_info.zeropage_indexed.zp_addr,
+			(uint8_t)g_addr_decoded_info.zeropage_indexed.addr,
+			read_cpu_byte(mem,
+				g_addr_decoded_info.zeropage_indexed.addr));
 		break;
 	case ZEROPAGE_Y:
-		
+	printf("%02X %s $%02X,Y @ %02X = %02X",
+			op1,
+			instr->mnemonic,
+			g_addr_decoded_info.zeropage_indexed.zp_addr,
+			(uint8_t)g_addr_decoded_info.zeropage_indexed.addr,
+			read_cpu_byte(mem,
+				g_addr_decoded_info.zeropage_indexed.addr));
 		break;
 	case RELATIVE:
 		displacement = read_cpu_byte(mem,
@@ -451,19 +463,49 @@ static void debug_instruction(const struct Memory *mem,
 			g_addr_decoded_info.absolute.addr);
 		break;
 	case ABSOLUTE_X:
-		
+	printf("%02X %02X %s $%04X,X @ %04X = %02X",
+			op1,
+			op2,
+			instr->mnemonic,
+			g_addr_decoded_info.absolute_indexed.absolute_addr,
+			g_addr_decoded_info.absolute_indexed.addr,
+			read_cpu_byte(mem,
+				g_addr_decoded_info.absolute_indexed.addr));
 		break;
 	case ABSOLUTE_Y:
-		
+		printf("%02X %02X %s $%04X,Y @ %04X = %02X",
+			op1,
+			op2,
+			instr->mnemonic,
+			g_addr_decoded_info.absolute_indexed.absolute_addr,
+			g_addr_decoded_info.absolute_indexed.addr,
+			read_cpu_byte(mem,
+				g_addr_decoded_info.absolute_indexed.addr));
 		break;
 	case INDIRECT:
-		
+		printf("%02X %02X %s ($%04X) = %04X",
+			op1,
+			op2,
+			instr->mnemonic,
+			g_addr_decoded_info.indirect.addr,
+			g_addr_decoded_info.indirect.iaddr);
 		break;
 	case INDEXED_INDIRECT:
-		
+		printf("%02X %s ($%02X,X) @ %02X = %04X = %02X",
+			op1,
+			instr->mnemonic,
+			g_addr_decoded_info.indexed_indirect.zp_addr,
+			g_addr_decoded_info.indexed_indirect.zp_x_addr,
+			g_addr_decoded_info.indexed_indirect.addr,
+			read_cpu_byte(mem,
+				g_addr_decoded_info.indexed_indirect.addr));
 		break;
 	case INDIRECT_INDEXED:
-		
+		/*printf("%02X %s ($02X),Y = %04X @ %04X = %02X",
+			op1,
+			instr->mnemonic,
+			g_addr_decoded_info.indirect_indexed.zp_addr,
+			g_addr_decoded_info.indirect_indexed.);*/
 		break;
 	default:
 		printf("%s", instr->mnemonic);
@@ -648,17 +690,18 @@ static uint16_t indirect(struct Cpu *cpu)
 
 static uint16_t indexed_indirect(struct Cpu *cpu)
 {
-	uint8_t zp_addr, lo, hi;
+	uint8_t zp_addr, zp_x_addr, lo, hi;
 	uint16_t addr;
 
-	zp_addr = read_cpu_byte(cpu->mem, cpu->regs.pc++) + cpu->regs.x;
+	zp_addr = read_cpu_byte(cpu->mem, cpu->regs.pc++);
+	zp_x_addr = zp_addr + cpu->regs.x;
 
-	lo = read_cpu_byte(cpu->mem, zp_addr);
-	hi = read_cpu_byte(cpu->mem, zp_addr + 1);
+	lo = read_cpu_byte(cpu->mem, zp_x_addr);
+	hi = read_cpu_byte(cpu->mem, zp_x_addr + 1);
 	addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
-	g_addr_decoded_info.indexed_indirect.x = cpu->regs.x;
 	g_addr_decoded_info.indexed_indirect.zp_addr = zp_addr;
+	g_addr_decoded_info.indexed_indirect.zp_x_addr = zp_x_addr;
 	g_addr_decoded_info.indexed_indirect.addr = addr;
 	
 	return addr;
@@ -781,7 +824,7 @@ void cpu_init(struct Cpu *cpu, struct Memory *mem)
 {
 	struct Registers regs;
 
-	regs.pc = 0xC000;
+	regs.pc = 0x0000;
 	regs.sp = 0xFF;
 	regs.a  = 0x00;
 	regs.x  = 0x00;
@@ -790,10 +833,16 @@ void cpu_init(struct Cpu *cpu, struct Memory *mem)
 
 	cpu->regs = regs;
 	cpu->mem = mem;
-	cpu->interrupt = 0/*(uint8_t)RESET*/;
+	cpu->interrupt = (uint8_t)RESET;
 	cpu->cycles = 0;
 	cpu->current_cycle = 0;
 	cpu->total_cycles = 0;
+
+	write_cpu_byte(mem, 0xC004, 0xA1);
+	write_cpu_byte(mem, 0xC005, 0xFE);
+	write_cpu_byte(mem, 0x0000, 0xF4);
+	write_cpu_byte(mem, 0x0001, 0xC5);
+	cpu->regs.x = 2;
 }
 
 INSTR(brk)
