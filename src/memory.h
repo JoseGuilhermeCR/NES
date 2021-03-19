@@ -1,23 +1,27 @@
-#ifndef __MEMORY_H__
-#define __MEMORY_H__
+#ifndef MEMORY_H_
+#define MEMORY_H_
 
 #include <stdint.h>
 
-struct Cartridge;
+#define CPU_RAM_SIZE 2048
+#define PPU_REGS_SIZE 8
+#define PPU_RAM_SIZE 2000
 
-struct Memory {
-	uint8_t cpu_ram[2048];
-	uint8_t ppu_regs[8];
-	uint8_t ppu_ram[2000];
-	struct Cartridge *cart;
-};
+typedef struct _Cartridge Cartridge;
 
-void memory_init(struct Memory *mem, struct Cartridge *cart);
+typedef struct _Memory {
+    uint8_t cpuRam[CPU_RAM_SIZE];
+    uint8_t ppuRegs[PPU_REGS_SIZE];
+    uint8_t ppuRam[PPU_RAM_SIZE];
+    Cartridge *cart;
+} Memory;
 
-void write_cpu_byte(struct Memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_cpu_byte(const struct Memory *mem, uint16_t addr);
+void MemoryInit(Memory *mem, Cartridge *cart);
 
-void write_ppu_byte(struct Memory *mem, uint16_t addr, uint8_t byte);
-uint8_t read_ppu_byte(const struct Memory *mem, uint16_t addr);
+void WriteCpuByte(Memory *mem, uint16_t addr, uint8_t byte);
+uint8_t ReadCpuByte(const Memory *mem, uint16_t addr);
+
+void WritePpuByte(Memory *mem, uint16_t addr, uint8_t byte);
+uint8_t ReadPpuByte(const Memory *mem, uint16_t addr);
 
 #endif

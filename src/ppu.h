@@ -1,31 +1,31 @@
-#ifndef __PPU_H__
-#define __PPU_H__
+#ifndef PPU_H_
+#define PPU_H_
 
 #include <stdint.h>
 
-struct Memory;
+typedef struct _Memory Memory;
 
-enum PpuRegisters {
-	PPUCTRL   = 0x2000,
-	PPUMASK   = 0x2001,
-	PPUSTATUS = 0x2002,
-	OAMADDR   = 0x2003,
-	OAMDATA   = 0x2004,
-	PPUSCROLL = 0x2005,
-	PPUADDR   = 0x2006,
-	PPUDATA   = 0x2007,
-	OAMDMA    = 0x4014
-};
+typedef enum _PpuRegisters {
+    PPUCTRL   = 0x2000,
+    PPUMASK   = 0x2001,
+    PPUSTATUS = 0x2002,
+    OAMADDR   = 0x2003,
+    OAMDATA   = 0x2004,
+    PPUSCROLL = 0x2005,
+    PPUADDR   = 0x2006,
+    PPUDATA   = 0x2007,
+    OAMDMA    = 0x4014
+} PpuRegisters;
 
-struct Ppu {
-	struct Memory *mem;
+typedef struct _Ppu {
+    Memory *mem;
 
-	uint8_t odd_frame;
-	uint16_t scanline;
-	uint16_t cycle;
-};
+    uint8_t oddFrame;
+    uint16_t scanline;
+    uint16_t cycle;
+} Ppu;
 
-void ppu_init(struct Ppu *ppu, struct Memory *mem);
-void ppu_emulate(struct Ppu *ppu);
+void PpuInit(Ppu *ppu, Memory *mem);
+void PpuEmulate(Ppu *ppu);
 
 #endif

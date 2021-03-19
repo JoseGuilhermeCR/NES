@@ -1,24 +1,24 @@
-#ifndef __NES_H__
-#define __NES_H__
+#ifndef NES_H_
+#define NES_H_
 
 #include <SDL2/SDL.h>
 #include "cpu.h"
 #include "ppu.h"
 #include "memory.h"
 
-struct nes {
-	uint8_t debug;
+typedef struct _Nes {
+    uint8_t debug;
 
-	SDL_Window *window;
-	SDL_Renderer *renderer;
+    SDL_Window *window;
+    SDL_Renderer *renderer;
 
-	struct Cpu cpu;
-	struct Ppu ppu;
-	struct Memory mem;
+    Cpu cpu;
+    Ppu ppu;
+    Memory mem;
 
-	uint8_t paused;
-	uint8_t running;
-};
+    uint8_t paused;
+    uint8_t running;
+} Nes;
 
 const uint32_t SCALE = 4;
 const uint32_t WIDTH = 256 * SCALE; 

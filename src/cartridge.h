@@ -1,30 +1,34 @@
-#ifndef __CARTRIDGE_H__
-#define __CARTRIDGE_H__
+#ifndef CARTRIDGE_H_
+#define CARTRIDGE_H_
 
 #include <stdint.h>
 
-struct Cartridge {
-	uint8_t prg_banks;
-	uint8_t chr_banks;
-	uint8_t *prg;
-	uint8_t *chr;
-	struct Mapper *mapper;
-};
+#include "memory.h"
 
-struct Mapper {
-	uint32_t (*map_cpu_write)(struct Cartridge*, uint16_t);
-	uint32_t (*map_cpu_read)(struct Cartridge*, uint16_t);
-};
+typedef struct _Mapper Mapper;
 
-void write_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr,
-			      uint8_t byte);
-uint8_t read_cpu_byte_cartridge(struct Cartridge *cart, uint16_t addr);
+typedef struct _Cartridge {
+    uint8_t prgBanks;
+    uint8_t chrBanks;
+    uint8_t *prg;
+    uint8_t *chr;
+    Mapper *mapper;
+} Cartridge;
 
-void cartridge_destroy(struct Cartridge *cart);
+typedef struct _Mapper {
+    uint32_t (*mapCpuWrite)(Cartridge*, uint16_t);
+    uint32_t (*mapCpuRead)(Cartridge*, uint16_t);
+} Mapper;
 
-uint32_t mapper0_cpu_write(struct Cartridge*, uint16_t);
-uint32_t mapper0_cpu_read(struct Cartridge*, uint16_t);
+void WriteCpuByteCartridge(Cartridge *cart, uint16_t addr,
+                  uint8_t byte);
+uint8_t ReadCpuByteCartridge(Cartridge *cart, uint16_t addr);
 
-extern struct Mapper mappers[1];
+void CartridgeDestroy(Cartridge *cart);
+
+uint32_t Mapper0CpuWrite(Cartridge *, uint16_t);
+uint32_t Mapper0CpuRead(Cartridge *, uint16_t);
+
+extern Mapper mappers[1];
 
 #endif
