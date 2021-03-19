@@ -39,6 +39,7 @@ int32_t main() {
     nes.paused = 0;
     nes.running = 1;
     nes.debug = 1;
+    nes.totalCycles = 0;
 
     nes.window = SDL_CreateWindow(
             "NES",
@@ -62,32 +63,39 @@ int32_t main() {
 
     FileToCart(&cart, "test_roms/nestest.nes");
 
-    MemoryInit(&nes.mem, &cart);
-    CpuInit(&nes.cpu, &nes.mem);
-    PpuInit(&nes.ppu, &nes.mem);
+    MemoryInit(&nes.mem, &cart, &nes.totalCycles);
+    CpuInit(&nes.cpu, &nes.mem, &nes.totalCycles);
+    PpuInit(&nes.ppu, &nes.mem, &nes.totalCycles);
 
 //	nes.cpu.regs.pc = 0xC000;
 //	nes.cpu.interrupt = 0;
 
     while (nes.running) {
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT)
+            if (e.type == SDL_QUIT) {
                 nes.running = 0;
-            else if (e.type == SDL_KEYDOWN)
+            } else if (e.type == SDL_KEYDOWN) {
                 if (e.key.keysym.sym == SDLK_p)
                     nes.paused = !nes.paused;
+            }
         }
 
         if (!nes.paused) {
+            MemoryClearReadFlags(&nes.mem);
+            
             finishedInstruction = CpuEmulate(&nes.cpu);
 
             PpuEmulate(&nes.ppu);
             PpuEmulate(&nes.ppu);
             PpuEmulate(&nes.ppu);
 
+            if (nes.ppu.needsNmi) {
+                CpuRequestInterrupt(&nes.cpu, NMI);
+                nes.ppu.needsNmi = 0;
+            }
+
             if (finishedInstruction)
-                printf("PPU: %i, %i CYC:%li\n", nes.ppu.scanline, nes.ppu.cycle, nes.cpu.totalCycles);
-                
+                printf("PPU: %i, %i CYC:%li\n", nes.ppu.scanline, nes.ppu.cycle, nes.totalCycles);  
         }
 
         SDL_SetRenderDrawColor(nes.renderer, 0, 0, 0, 255);
@@ -97,7 +105,7 @@ int32_t main() {
         //SDL_RenderFillRect(nes.renderer, &NES_RECT);
         SDL_RenderPresent(nes.renderer);
 
-        SDL_Delay(16);
+        //SDL_Delay(16);
     }
 
     SDL_DestroyRenderer(nes.renderer);

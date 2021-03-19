@@ -411,13 +411,16 @@ static const InstructionOrNothing gInstructionTable[] = {
 
 static AddrDecodeInfo gAddrDecodedInfo;
 
-static void DebugInstruction(const Memory *mem,
+static void DebugInstruction(Memory *mem,
                   uint16_t oldPc,
                   uint8_t opcode,
                   uint8_t op1,
                   uint8_t op2,
                   const Instruction *instr) {
     printf("%04X %02X ", oldPc, opcode);
+    
+    // Save Memory Read Flags because we might change their values
+    uint8_t ppustatusRead = mem->ppustatusRead;
 
     switch (instr->adrMode) {
     case IMMEDIATE:
@@ -519,6 +522,9 @@ static void DebugInstruction(const Memory *mem,
     }
 
     printf("\t");
+
+    // Set original read flags values back.
+    mem->ppustatusRead = ppustatusRead;
 }
 
 static void PrintStack(const Cpu *cpu) {
@@ -567,8 +573,8 @@ static void SetZnFlags(Cpu *cpu, uint8_t value) {
     SetStatus(cpu, ZERO, value == 0);	
 }
 
-static void RequestInterrupt(Cpu *cpu, Interrupt i) {
-    if (!CheckStatus(cpu, INTERRUPT_DISABLE))
+void CpuRequestInterrupt(Cpu *cpu, Interrupt i) {
+    if (i == NMI || !CheckStatus(cpu, INTERRUPT_DISABLE))
         cpu->interrupt |= i;
 }
 
@@ -594,6 +600,7 @@ static void HandleInterrupt(Cpu *cpu) {
     uint8_t hi = ReadCpuByte(cpu->mem, handler + 1);
     cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
 
+    SetStatus(cpu, INTERRUPT_DISABLE, 1);
     cpu->currentCycle = 0;
     cpu->cycles = CYCLES_AFTER_INTERRUPT;
 }
@@ -783,14 +790,14 @@ uint8_t CpuEmulate(Cpu *cpu) {
     if (instr->execute)
         instr->execute(cpu, addr);
 
-    //print_registers(&cpu->regs);
+    PrintRegisters(&cpu->regs);
 
     /* Finished an instruction. */
-    cpu->totalCycles += cpu->cycles;
+    *(cpu->totalCycles) += cpu->cycles;
     return 1;
 }
 
-void CpuInit(Cpu *cpu, Memory *mem) {
+void CpuInit(Cpu *cpu, Memory *mem, uint64_t *totalCycles) {
     Registers regs;
 
     regs.pc = 0x0000;
@@ -805,13 +812,7 @@ void CpuInit(Cpu *cpu, Memory *mem) {
     cpu->interrupt = RESET;
     cpu->cycles = 0;
     cpu->currentCycle = 0;
-    cpu->totalCycles = 0;
-
-    WriteCpuByte(mem, 0xC004, 0xA1);
-    WriteCpuByte(mem, 0xC005, 0xFE);
-    WriteCpuByte(mem, 0x0000, 0xF4);
-    WriteCpuByte(mem, 0x0001, 0xC5);
-    cpu->regs.x = 2;
+    cpu->totalCycles = totalCycles;
 }
 
 INSTR(Brk) {
@@ -819,12 +820,11 @@ INSTR(Brk) {
 
     PushStack(cpu, cpu->regs.pc >> 8);
     PushStack(cpu, cpu->regs.pc & 0xFF);
-    PushStack(cpu, cpu->regs.s);
+    PushStack(cpu, cpu->regs.s | BREAK);
 
     uint8_t lo = ReadCpuByte(cpu->mem, IRQ_INTERRUPT_VECTOR);
     uint8_t hi = ReadCpuByte(cpu->mem, IRQ_INTERRUPT_VECTOR + 1);
     cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;
-    SetStatus(cpu, BREAK, 1);
 
     cpu->cycles += 7;
 }
@@ -930,7 +930,7 @@ INSTR(Sec) {
 INSTR(Rti) {
     (void)addr;
 
-    cpu->regs.s = PopStack(cpu);
+    cpu->regs.s = PopStack(cpu) & ~BREAK;
     uint8_t lo = PopStack(cpu);
     uint8_t hi = PopStack(cpu);
     cpu->regs.pc = ((uint16_t)hi << 8) | (uint16_t)lo;

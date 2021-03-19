@@ -18,6 +18,8 @@ typedef struct _Nes {
 
     uint8_t paused;
     uint8_t running;
+
+    uint64_t totalCycles;
 } Nes;
 
 const uint32_t SCALE = 4;

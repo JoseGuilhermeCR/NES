@@ -5,27 +5,18 @@
 
 typedef struct _Memory Memory;
 
-typedef enum _PpuRegisters {
-    PPUCTRL   = 0x2000,
-    PPUMASK   = 0x2001,
-    PPUSTATUS = 0x2002,
-    OAMADDR   = 0x2003,
-    OAMDATA   = 0x2004,
-    PPUSCROLL = 0x2005,
-    PPUADDR   = 0x2006,
-    PPUDATA   = 0x2007,
-    OAMDMA    = 0x4014
-} PpuRegisters;
-
 typedef struct _Ppu {
     Memory *mem;
 
     uint8_t oddFrame;
     uint16_t scanline;
     uint16_t cycle;
+    uint64_t *totalCycles;
+
+    uint8_t needsNmi;
 } Ppu;
 
-void PpuInit(Ppu *ppu, Memory *mem);
+void PpuInit(Ppu *ppu, Memory *mem, uint64_t *totalCycles);
 void PpuEmulate(Ppu *ppu);
 
 #endif

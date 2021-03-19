@@ -54,10 +54,11 @@ typedef struct _Cpu {
     uint8_t cycles;
     uint8_t currentCycle;
 
-    uint64_t totalCycles;
+    uint64_t *totalCycles;
 } Cpu;
 
-void CpuInit(Cpu *cpu, Memory *mem);
+void CpuInit(Cpu *cpu, Memory *mem, uint64_t *totalCycles);
 uint8_t CpuEmulate(Cpu *cpu);
+void CpuRequestInterrupt(Cpu *cpu, Interrupt i);
 
 #endif
