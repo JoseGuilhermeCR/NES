@@ -87,14 +87,14 @@ INSTR(Sed);
 static void IncDecImpl(Cpu *cpu, uint16_t addr, uint8_t change);
 static void CmpImpl(Cpu *cpu, uint16_t addr, uint8_t reg);
 static void AdcImpl(Cpu *cpu, uint16_t addr, uint8_t ones_complement);
-static void Branch(Cpu *cpu, uint16_t addr, Status status,
+static void Branch(Cpu *cpu, uint16_t addr, STATUS status,
            uint8_t value_needed);
 
 typedef struct _Instruction {
     const char *mnemonic;
     uint8_t opcode;
     uint8_t cycles;
-    AddressingMode adrMode;
+    ADDRESSING_MODE adrMode;
     void (*execute)(Cpu* cpu, uint16_t addr);
 } Instruction;
 
@@ -555,11 +555,11 @@ static uint8_t PopStack(Cpu *cpu) {
     return ReadCpuByte(cpu->mem, ++cpu->regs.sp + STACK_START);
 }
 
-static uint8_t CheckStatus(Cpu *cpu, Status s) {
+static uint8_t CheckStatus(Cpu *cpu, STATUS s) {
     return (cpu->regs.s & s) != 0;
 }
 
-static void SetStatus(Cpu *cpu, Status s, uint8_t active) {
+static void SetStatus(Cpu *cpu, STATUS s, uint8_t active) {
     if (active)
         cpu->regs.s |= s;
     else
@@ -573,7 +573,7 @@ static void SetZnFlags(Cpu *cpu, uint8_t value) {
     SetStatus(cpu, ZERO, value == 0);	
 }
 
-void CpuRequestInterrupt(Cpu *cpu, Interrupt i) {
+void CpuRequestInterrupt(Cpu *cpu, INTERRUPT i) {
     if (i == NMI || !CheckStatus(cpu, INTERRUPT_DISABLE))
         cpu->interrupt |= i;
 }
@@ -889,10 +889,8 @@ INSTR(Bit) {
 }
 
 INSTR(Rol) {
-    uint8_t byte, carry;
-
-    byte = ReadCpuByte(cpu->mem, addr);
-    carry = CheckStatus(cpu, CARRY);
+    uint8_t byte = ReadCpuByte(cpu->mem, addr);
+    uint8_t carry = CheckStatus(cpu, CARRY);
 
     SetStatus(cpu, CARRY, byte & NEGATIVE);
     byte = (byte << 1) | carry;
@@ -997,10 +995,8 @@ INSTR(Adc) {
 }
 
 INSTR(Ror) {
-    uint8_t byte, carry;
-
-    byte = ReadCpuByte(cpu->mem, addr);
-    carry = CheckStatus(cpu, CARRY);
+    uint8_t byte = ReadCpuByte(cpu->mem, addr);
+    uint8_t carry = CheckStatus(cpu, CARRY);
 
     SetStatus(cpu, CARRY, byte & CARRY);
     byte = (byte >> 1) | (carry << 7);
@@ -1012,9 +1008,7 @@ INSTR(Ror) {
 INSTR(RorA) {
     (void)addr;
 
-    uint8_t carry;
-    
-    carry = CheckStatus(cpu, CARRY);
+    uint8_t carry = CheckStatus(cpu, CARRY);
 
     SetStatus(cpu, CARRY, cpu->regs.a & CARRY);
     cpu->regs.a = (cpu->regs.a >> 1) | (carry << 7);
@@ -1209,16 +1203,14 @@ static void CmpImpl(Cpu *cpu, uint16_t addr, uint8_t reg) {
 }
 
 static void AdcImpl(Cpu *cpu, uint16_t addr, uint8_t onesComplement) {	
-    uint8_t byte, a, overflow, carry;
-
-    byte = ReadCpuByte(cpu->mem, addr);
+    uint8_t byte = ReadCpuByte(cpu->mem, addr);
 
     if (onesComplement)
         byte = ~byte;
 
-    a = cpu->regs.a + byte + CheckStatus(cpu, CARRY);
-    overflow = (byte & 0x80) == (cpu->regs.a & 0x80) && (byte & 0x80) != (a & 0x80);
-    carry = (((uint16_t)cpu->regs.a + (uint16_t)byte) & 0xFF00) != 0;
+    uint8_t a = cpu->regs.a + byte + CheckStatus(cpu, CARRY);
+    uint8_t overflow = (byte & 0x80) == (cpu->regs.a & 0x80) && (byte & 0x80) != (a & 0x80);
+    uint8_t carry = (((uint16_t)cpu->regs.a + (uint16_t)byte) & 0xFF00) != 0;
 
     SetStatus(cpu, OVERFLOW, overflow);
     SetZnFlags(cpu, a);
@@ -1227,14 +1219,12 @@ static void AdcImpl(Cpu *cpu, uint16_t addr, uint8_t onesComplement) {
     cpu->regs.a = a;
 }
 
-static void Branch(Cpu *cpu, uint16_t addr, Status status,
+static void Branch(Cpu *cpu, uint16_t addr, STATUS status,
            uint8_t valueNeeded) {
-    uint8_t displacement, oldLo;
-
-    displacement = ReadCpuByte(cpu->mem, addr);
+    uint8_t displacement = ReadCpuByte(cpu->mem, addr);
 
     if (CheckStatus(cpu, status) == valueNeeded) {
-        oldLo = (uint8_t)(cpu->regs.pc & 0xFF);
+        uint8_t oldLo = (uint8_t)(cpu->regs.pc & 0xFF);
         /* TODO: Maybe fix? displacement seems to work for now. */
         if (displacement & NEGATIVE)
             cpu->regs.pc += (int8_t)displacement;

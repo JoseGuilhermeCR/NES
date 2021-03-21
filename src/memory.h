@@ -1,7 +1,6 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
-#include <bits/stdint-uintn.h>
 #include <stdint.h>
 
 #define CPU_RAM_SIZE 2048
@@ -41,7 +40,7 @@ typedef struct _Memory {
     uint64_t *totalCycles;
 } Memory;
 
-typedef enum _PpuRegisters {
+typedef enum _PPU_REGISTERS {
     PPUCTRL   = 0x2000,
     PPUMASK   = 0x2001,
     PPUSTATUS = 0x2002,
@@ -51,7 +50,7 @@ typedef enum _PpuRegisters {
     PPUADDR   = 0x2006,
     PPUDATA   = 0x2007,
     OAMDMA    = 0x4014
-} PpuRegisters;
+} PPU_REGISTERS;
 
 void MemoryInit(Memory *mem, Cartridge *cart, uint64_t *totalCycles);
 void MemoryClearReadFlags(Memory *mem);

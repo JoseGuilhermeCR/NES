@@ -5,7 +5,7 @@
 
 typedef struct _Memory Memory;
 
-typedef enum _Status {
+typedef enum _STATUS {
     CARRY             = 0x01,
     ZERO              = 0x02,
     INTERRUPT_DISABLE = 0x04,
@@ -13,15 +13,15 @@ typedef enum _Status {
     BREAK             = 0x10,
     OVERFLOW          = 0x40,
     NEGATIVE          = 0x80
-} Status;
+} STATUS;
 
-typedef enum _Interrupt {
+typedef enum _INTERRUPT {
     IRQ   = 0x01,
     NMI   = 0x02,
     RESET = 0x04
-} Interrupt;
+} INTERRUPT;
 
-typedef enum _AddressingMode {
+typedef enum _ADDRESSING_MODE {
     IMPLICIT = 1,
     IMMEDIATE,
     ACCUMULATOR,
@@ -35,7 +35,7 @@ typedef enum _AddressingMode {
     INDIRECT,
     INDEXED_INDIRECT,
     INDIRECT_INDEXED
-} AddressingMode;
+} ADDRESSING_MODE;
 
 typedef struct _Registers {
     uint16_t pc; // Program Counter
@@ -59,6 +59,6 @@ typedef struct _Cpu {
 
 void CpuInit(Cpu *cpu, Memory *mem, uint64_t *totalCycles);
 uint8_t CpuEmulate(Cpu *cpu);
-void CpuRequestInterrupt(Cpu *cpu, Interrupt i);
+void CpuRequestInterrupt(Cpu *cpu, INTERRUPT i);
 
 #endif
