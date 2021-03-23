@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "ppu.h"
 #include "memory.h"
@@ -18,6 +19,8 @@ static void PostRenderScanline(Ppu *ppu);
 
 void PpuInit(Ppu *ppu, Memory *mem, uint64_t *totalCycles) {
     ppu->mem = mem;
+    memset(ppu->oamMemory, 0, OAM_ENTRY_NUM * sizeof(OAMEntry));
+
     ppu->oddFrame = 0;
     ppu->scanline = SCANLINE_MAX - 1;
     ppu->cycle = 0;
