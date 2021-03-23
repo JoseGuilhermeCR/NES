@@ -18,16 +18,21 @@ typedef struct _Cartridge {
 typedef struct _Mapper {
     uint32_t (*mapCpuWrite)(Cartridge*, uint16_t);
     uint32_t (*mapCpuRead)(Cartridge*, uint16_t);
+    uint32_t (*mapPpuWrite)(Cartridge*, uint16_t);
+    uint32_t (*mapPpuRead)(Cartridge*, uint16_t);
 } Mapper;
 
-void WriteCpuByteCartridge(Cartridge *cart, uint16_t addr,
-                  uint8_t byte);
+void WriteCpuByteCartridge(Cartridge *cart, uint16_t addr, uint8_t byte);
 uint8_t ReadCpuByteCartridge(Cartridge *cart, uint16_t addr);
+void WritePpuByteCartridge(Cartridge *cart, uint16_t addr, uint8_t byte);
+uint8_t ReadPpuByteCartridge(Cartridge *cart, uint16_t addr);
 
 void CartridgeDestroy(Cartridge *cart);
 
 uint32_t Mapper0CpuWrite(Cartridge *, uint16_t);
 uint32_t Mapper0CpuRead(Cartridge *, uint16_t);
+uint32_t Mapper0PpuWrite(Cartridge *, uint16_t);
+uint32_t Mapper0PpuRead(Cartridge *, uint16_t);
 
 extern Mapper mappers[1];
 

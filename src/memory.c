@@ -5,14 +5,22 @@
 #include "memory.h"
 #include "cartridge.h"
 
-#define RAM_ADDRESS_END       0x1FFF
-#define REAL_RAM_END          0x7FF
-#define PPU_ADDRESS_BEG       0x2000
-#define PPU_ADDRESS_END       0x3FFF
-#define REAL_PPU_END          0x7
-#define AUDIO_IO_ADDRESS_BEG  0x4000
-#define AUDIO_IO_ADDRESS_END  0x4017
-#define CARTRIDGE_ADDRESS_BEG 0x4020
+#define RAM_ADDR_END       0x1FFF
+#define REAL_RAM_END       0x07FF
+#define PPU_ADDR_BEG       0x2000
+#define PPU_ADDR_END       0x3FFF
+#define REAL_PPU_END       0x0007
+#define AUDIO_IO_ADDR_BEG  0x4000
+#define AUDIO_IO_ADDR_END  0x4017
+#define CARTRIDGE_ADDR_BEG 0x4020
+
+#define PATTERN_TABLE_ADDR_END 0x1FFF
+#define NAMETABLE_ADDR_BEG     0x2000
+#define NAMETABLE_ADDR_END     0x2FFF
+#define NAMETABLE_MIRROR_BEG   0x3000
+#define NAMETABLE_MIRROR_END   0x3EFF
+#define PALETTE_ADDR_BEG       0x3F00
+#define PALETTE_ADDR_END       0x3FFF
 
 void MemoryInit(Memory *mem, Cartridge *cart, uint64_t *totalCycles) {
     memset(mem->cpuRam, 0, CPU_RAM_SIZE);
@@ -29,26 +37,26 @@ void MemoryClearReadFlags(Memory *mem) {
 }
 
 void WriteCpuByte(Memory *mem, uint16_t addr, uint8_t byte) {
-    if (addr <= RAM_ADDRESS_END) {
+    if (addr <= RAM_ADDR_END) {
         mem->cpuRam[addr & REAL_RAM_END] = byte;
-    } else if (addr >= PPU_ADDRESS_BEG && addr <= PPU_ADDRESS_END) {
+    } else if (addr >= PPU_ADDR_BEG && addr <= PPU_ADDR_END) {
         mem->ppuRegs[addr & REAL_PPU_END] = byte;
-    } else if (addr >= AUDIO_IO_ADDRESS_BEG && addr <= AUDIO_IO_ADDRESS_END) {
-    } else if (addr >= CARTRIDGE_ADDRESS_BEG) {
+    } else if (addr >= AUDIO_IO_ADDR_BEG && addr <= AUDIO_IO_ADDR_END) {
+    } else if (addr >= CARTRIDGE_ADDR_BEG) {
         WriteCpuByteCartridge(mem->cart, addr, byte);
     }
 }
 
 uint8_t ReadCpuByte(Memory *mem, uint16_t addr) {
-    if (addr <= RAM_ADDRESS_END) {
+    if (addr <= RAM_ADDR_END) {
         return mem->cpuRam[addr & REAL_RAM_END];
-    } else if (addr >= PPU_ADDRESS_BEG && addr <= PPU_ADDRESS_END) {
+    } else if (addr >= PPU_ADDR_BEG && addr <= PPU_ADDR_END) {
         mem->ppustatusRead = addr == PPUSTATUS;
 
         return mem->ppuRegs[addr & REAL_PPU_END];
-    } else if (addr >= AUDIO_IO_ADDRESS_BEG && addr <= AUDIO_IO_ADDRESS_END) {
+    } else if (addr >= AUDIO_IO_ADDR_BEG && addr <= AUDIO_IO_ADDR_END) {
         return 0;
-    } else if (addr >= CARTRIDGE_ADDRESS_BEG) {
+    } else if (addr >= CARTRIDGE_ADDR_BEG) {
         return ReadCpuByteCartridge(mem->cart, addr);
     }
     
@@ -56,22 +64,30 @@ uint8_t ReadCpuByte(Memory *mem, uint16_t addr) {
     return 0;
 }
 
-// TODO: DEFINES FOR PPU MEMORY SPACE.
+// TODO: Finish this.
 void WritePpuByte(Memory *mem, uint16_t addr, uint8_t byte) {
-    if (addr <= 0x1FFF) {
-                
-    } else if (addr >= 0x2000 && addr <= 0x2FFF) {
-    } else if (addr >= 0x3000 && addr <= 0x3EFF) {
-    } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+    if (addr <= PATTERN_TABLE_ADDR_END) {
+        WritePpuByteCartridge(mem->cart, addr, byte);;
+    } else if (addr >= NAMETABLE_ADDR_BEG && addr <= NAMETABLE_ADDR_END) {
+        mem->ppuRam[addr] = byte;
+    } else if (addr >= NAMETABLE_MIRROR_BEG && addr <= NAMETABLE_MIRROR_END) {
+        // TODO:
+        //mem->ppuRam[addr] = byte;
+    } else if (addr >= PALETTE_ADDR_BEG && addr <= PALETTE_ADDR_BEG) {
+        //mem->ppuRam[addr] = byte;
     }
 }
 
-uint8_t ReadPpuByte(Memory *mem, uint16_t addr)
-{
-    if (addr <= 0x1FFF) {				
-    } else if (addr >= 0x2000 && addr <= 0x2FFF) {
-    } else if (addr >= 0x3000 && addr <= 0x3EFF) {
-    } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+uint8_t ReadPpuByte(Memory *mem, uint16_t addr) {
+    if (addr <= PATTERN_TABLE_ADDR_END) {
+        return ReadPpuByteCartridge(mem->cart, addr);
+    } else if (addr >= NAMETABLE_ADDR_BEG && addr <= NAMETABLE_ADDR_END) {
+        return mem->ppuRam[addr];
+    } else if (addr >= NAMETABLE_MIRROR_BEG && addr <= NAMETABLE_MIRROR_END) {
+        // TODO:
+        //return mem->ppuRam[addr];
+    } else if (addr >= PALETTE_ADDR_BEG && addr <= PALETTE_ADDR_BEG) {
+        return mem->ppuRam[addr];
     }
     return 0;
 }
