@@ -5,12 +5,14 @@
 #include "nes.h"
 #include "ppu.h"
 
-// TODO: Refactor main function and cartridge logic.
+// TODO: Refactor cartridge logic.
 
 #define KIB_16 16 * 1024
 #define KIB_8  8  * 1024
 
-static void FileToCart(Cartridge *cart, const char *filename) {
+static Cartridge *FileToCart(const char *filename) {
+    Cartridge *cart = malloc(sizeof(Cartridge));
+
     FILE *rom = fopen(filename, "r");
 
     /* Just read nestest for now. */
@@ -26,93 +28,111 @@ static void FileToCart(Cartridge *cart, const char *filename) {
     fread(cart->chr, 1, cart->chrBanks * KIB_8, rom);
 
     fclose(rom);
+
+    return cart;
 }
 
-int32_t main() {
-    Nes nes;
-    Cartridge cart;
-    uint8_t finishedInstruction;
-    SDL_Event e;
+void NesInit(Nes *nes) {
+    nes->paused = 0;
+    nes->running = 1;
+    nes->debug = 1;
+    nes->totalCycles = 0;
 
+    NesWindowInit(&nes->nesWindow);
+
+    Cartridge *cart = FileToCart("test_roms/nestest.nes");
+
+    MemoryInit(&nes->mem, cart, &nes->totalCycles);
+    CpuInit(&nes->cpu, &nes->mem, &nes->totalCycles);
+    PpuInit(&nes->ppu, &nes->mem, &nes->totalCycles);
+
+}
+
+void NesEmulate(Nes *nes) {
+    uint8_t finishedInstruction;
+    
+    while (nes->running) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                nes->running = 0;
+            } else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_p)
+                    nes->paused = !nes->paused;
+            }
+        }
+
+        if (!nes->paused) {
+            MemoryClearReadFlags(&nes->mem);
+            
+            finishedInstruction = CpuEmulate(&nes->cpu);
+
+            PpuEmulate(&nes->ppu);
+            PpuEmulate(&nes->ppu);
+            PpuEmulate(&nes->ppu);
+
+            if (nes->ppu.needsNmi) {
+                CpuRequestInterrupt(&nes->cpu, NMI);
+                nes->ppu.needsNmi = 0;
+            }
+
+            if (finishedInstruction)
+                printf("PPU: %i, %i CYC:%li\n", nes->ppu.scanline, nes->ppu.cycle, nes->totalCycles);  
+        }
+
+        SDL_SetRenderDrawColor(nes->nesWindow.renderer, 0, 0, 0, 255);
+        SDL_RenderClear(nes->nesWindow.renderer);
+
+        //SDL_SetRenderDrawColor(nes.renderer, 128, 128, 128, 255);
+        //SDL_RenderFillRect(nes.renderer, &NES_RECT);
+        SDL_RenderPresent(nes->nesWindow.renderer);
+
+        //SDL_Delay(16);
+    }
+}
+
+void NesDestroy(Nes *nes) {
+    NesWindowDestroy(&nes->nesWindow);
+    CartridgeDestroy(nes->mem.cart);
+    free(nes->mem.cart);
+}
+
+void NesWindowInit(NesWindow *window) {
     SDL_Init(SDL_INIT_VIDEO);
 
-    nes.paused = 0;
-    nes.running = 1;
-    nes.debug = 1;
-    nes.totalCycles = 0;
+    window->scale = 4;
+    window->width = 256 * window->scale;
+    window->height = 240 * window->scale;
 
-    nes.window = SDL_CreateWindow(
+    window->window = SDL_CreateWindow(
             "NES",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
-            WIDTH,
-            HEIGHT,
+            window->width,
+            window->height,
             0
     );
 
-    if (!nes.window) {
-        printf("Could not create window: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    nes.renderer = SDL_CreateRenderer(
-            nes.window,
+    window->renderer = SDL_CreateRenderer(
+            window->window,
             -1,
             SDL_RENDERER_ACCELERATED
     );
 
-    FileToCart(&cart, "test_roms/nestest.nes");
+}
 
-    MemoryInit(&nes.mem, &cart, &nes.totalCycles);
-    CpuInit(&nes.cpu, &nes.mem, &nes.totalCycles);
-    PpuInit(&nes.ppu, &nes.mem, &nes.totalCycles);
-
-//	nes.cpu.regs.pc = 0xC000;
-//	nes.cpu.interrupt = 0;
-
-    while (nes.running) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                nes.running = 0;
-            } else if (e.type == SDL_KEYDOWN) {
-                if (e.key.keysym.sym == SDLK_p)
-                    nes.paused = !nes.paused;
-            }
-        }
-
-        if (!nes.paused) {
-            MemoryClearReadFlags(&nes.mem);
-            
-            finishedInstruction = CpuEmulate(&nes.cpu);
-
-            PpuEmulate(&nes.ppu);
-            PpuEmulate(&nes.ppu);
-            PpuEmulate(&nes.ppu);
-
-            if (nes.ppu.needsNmi) {
-                CpuRequestInterrupt(&nes.cpu, NMI);
-                nes.ppu.needsNmi = 0;
-            }
-
-            if (finishedInstruction)
-                printf("PPU: %i, %i CYC:%li\n", nes.ppu.scanline, nes.ppu.cycle, nes.totalCycles);  
-        }
-
-        SDL_SetRenderDrawColor(nes.renderer, 0, 0, 0, 255);
-        SDL_RenderClear(nes.renderer);
-
-        //SDL_SetRenderDrawColor(nes.renderer, 128, 128, 128, 255);
-        //SDL_RenderFillRect(nes.renderer, &NES_RECT);
-        SDL_RenderPresent(nes.renderer);
-
-        //SDL_Delay(16);
-    }
-
-    SDL_DestroyRenderer(nes.renderer);
-    SDL_DestroyWindow(nes.window);
+void NesWindowDestroy(NesWindow *window) {
+    SDL_DestroyRenderer(window->renderer);
+    SDL_DestroyWindow(window->window);
     SDL_Quit();
+}
 
-    CartridgeDestroy(&cart);
+int32_t main() {
+    Nes nes;
+
+    NesInit(&nes);
+    NesEmulate(&nes);
+    NesDestroy(&nes);
 
     return 0;
 }

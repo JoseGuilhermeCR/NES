@@ -6,12 +6,19 @@
 #include "ppu.h"
 #include "memory.h"
 
-typedef struct _Nes {
-    uint8_t debug;
+typedef struct _NesWindow {
+    uint32_t scale;
+    uint32_t width;
+    uint32_t height;
 
     SDL_Window *window;
     SDL_Renderer *renderer;
+} NesWindow;
 
+typedef struct _Nes {
+    uint8_t debug;
+
+    NesWindow nesWindow;
     Cpu cpu;
     Ppu ppu;
     Memory mem;
@@ -22,8 +29,11 @@ typedef struct _Nes {
     uint64_t totalCycles;
 } Nes;
 
-const uint32_t SCALE = 4;
-const uint32_t WIDTH = 256 * SCALE; 
-const uint32_t HEIGHT = 240 * SCALE;
+void NesInit(Nes *nes);
+void NesEmulate(Nes *nes);
+void NesDestroy(Nes *nes);
+
+void NesWindowInit(NesWindow *window);
+void NesWindowDestroy(NesWindow *window);
 
 #endif
